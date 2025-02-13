@@ -203,6 +203,7 @@ export default function MacroCalculator() {
                     setFats("")
                     setProtein("")
                     setCalories(0)
+                    window.location.href = "/"
                   }}
                 >
                   CANCEL
