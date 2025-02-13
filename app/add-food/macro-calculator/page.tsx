@@ -9,8 +9,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { ChevronLeft } from "lucide-react"
+import { useSession } from "next-auth/react"
 
 export default function MacroCalculator() {
+  const { data: session } = useSession()
   const [mealName, setMealName] = useState("breakfast")
   const [calories, setCalories] = useState(0)
   const [carbs, setCarbs] = useState("")
@@ -27,16 +29,49 @@ export default function MacroCalculator() {
     setCalories(Math.round(total))
   }, [carbs, protein, fats])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    console.log({
-      mealName,
-      calories,
-      carbs,
-      fats,
-      protein,
-    })
+    
+    if (!session?.user) {
+      console.error('User not authenticated')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/food-diary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          meal: mealName,
+          foodName: "Custom Entry",
+          quantity: 1,
+          unit: "serving",
+          calories,
+          carbs: Number(carbs),
+          fats: Number(fats),
+          protein: Number(protein),
+          date: new Date().toISOString(),
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to add food entry')
+      }
+
+      // Reset form after successful submission
+      setCarbs("")
+      setFats("")
+      setProtein("")
+      setCalories(0)
+
+      // Optionally redirect back to food diary
+      window.location.href = "/"
+    } catch (error) {
+      console.error('Error submitting food entry:', error)
+      // Handle error (show error message to user)
+    }
   }
 
   // Handle input validation and changes

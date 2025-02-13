@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { CalendarIcon, ChevronLeft, ChevronRight, Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -11,6 +11,7 @@ import { format } from "date-fns"
 export default function FoodDiary() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [foodEntries, setFoodEntries] = useState([])
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("en-US", {
@@ -29,6 +30,21 @@ export default function FoodDiary() {
     { href: "/recipes", label: "Recipes" },
     { href: "/settings", label: "Settings" },
   ]
+
+  useEffect(() => {
+    const fetchFoodEntries = async () => {
+      try {
+        const response = await fetch('/api/food-diary')
+        if (!response.ok) throw new Error('Failed to fetch entries')
+        const data = await response.json()
+        setFoodEntries(data)
+      } catch (error) {
+        console.error('Error fetching food entries:', error)
+      }
+    }
+
+    fetchFoodEntries()
+  }, [])
 
   return (
     <div className="min-h-screen bg-black text-white">
