@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -19,41 +19,37 @@ interface FoodItem {
 
 export default function AddFood({ params }: { params: { meal: string } }) {
   const [searchQuery, setSearchQuery] = useState("")
-  const [foodItems, setFoodItems] = useState<FoodItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const [foodItems, setFoodItems] = useState<FoodItem[]>([
+    {
+      id: "1",
+      name: "Kellogg's - Rice Krispies Treats, Original",
+      defaultQty: 1,
+      defaultUnit: "bar",
+      checked: false,
+    },
+    {
+      id: "2",
+      name: "Starbucks Coffee Company - Double Shot Energy Coffee Drink, Vanilla",
+      defaultQty: 1,
+      defaultUnit: "can",
+      checked: false,
+    },
+    {
+      id: "3",
+      name: "365 Everyday Value - White Hot Dog Buns",
+      defaultQty: 2,
+      defaultUnit: "bun",
+      checked: false,
+    },
+    {
+      id: "4",
+      name: "Field Roast - Sausages, Italian Garlic & Fennel, Plant-Based",
+      defaultQty: 2,
+      defaultUnit: "sausage",
+      checked: false,
+    },
+  ])
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-
-  // Fetch food items from Google Sheet
-  useEffect(() => {
-    const fetchFoodItems = async () => {
-      try {
-        const response = await fetch('/api/food/search', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ query: searchQuery }),
-        })
-
-        if (!response.ok) throw new Error('Failed to fetch food items')
-
-        const data = await response.json()
-        setFoodItems(data.map((item: any) => ({
-          id: item.id || item.rowNumber?.toString(),
-          name: item.name,
-          defaultQty: Number(item.defaultQty) || 1,
-          defaultUnit: item.defaultUnit || 'serving',
-          checked: false
-        })))
-      } catch (error) {
-        console.error('Error fetching food items:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchFoodItems()
-  }, [searchQuery])
 
   const handleCheckItem = (id: string) => {
     setFoodItems(foodItems.map((item) => (item.id === id ? { ...item, checked: !item.checked } : item)))
@@ -150,7 +146,7 @@ export default function AddFood({ params }: { params: { meal: string } }) {
                 type="text"
                 placeholder="Search foods..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
                 className="flex-1 bg-gray-800 border-green-500 text-white"
               />
               <Button className="bg-green-500 hover:bg-green-600 w-full sm:w-auto">Search</Button>
@@ -176,51 +172,45 @@ export default function AddFood({ params }: { params: { meal: string } }) {
                   Add Checked
                 </Button>
 
-                {loading ? (
-                  <div className="text-center py-4 text-green-400">Loading...</div>
-                ) : foodItems.length === 0 ? (
-                  <div className="text-center py-4 text-green-400">No food items found</div>
-                ) : (
-                  <div className="space-y-2">
-                    {foodItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 bg-gray-800 p-4 rounded-lg"
-                      >
-                        <Checkbox
-                          checked={item.checked}
-                          onCheckedChange={() => handleCheckItem(item.id)}
-                          className="border-green-500 data-[state=checked]:bg-green-500"
+                <div className="space-y-2">
+                  {foodItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 bg-gray-800 p-4 rounded-lg"
+                    >
+                      <Checkbox
+                        checked={item.checked}
+                        onCheckedChange={() => handleCheckItem(item.id)}
+                        className="border-green-500 data-[state=checked]:bg-green-500"
+                      />
+                      <span className="flex-1 text-sm sm:text-base">{item.name}</span>
+                      <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                        <span className="text-xs sm:text-sm text-green-400">Qty:</span>
+                        <Input
+                          type="number"
+                          value={item.defaultQty}
+                          className="w-16 bg-gray-700 border-green-500 text-xs sm:text-sm"
                         />
-                        <span className="flex-1 text-sm sm:text-base">{item.name}</span>
-                        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                          <span className="text-xs sm:text-sm text-green-400">Qty:</span>
-                          <Input
-                            type="number"
-                            value={item.defaultQty}
-                            className="w-16 bg-gray-700 border-green-500 text-xs sm:text-sm"
-                          />
-                          <span className="text-xs sm:text-sm text-green-400">of</span>
-                          <Select defaultValue={item.defaultUnit}>
-                            <SelectTrigger className="w-24 sm:w-32 bg-gray-700 border-green-500 text-xs sm:text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="bg-gray-800 border-green-500">
-                              <SelectItem value={item.defaultUnit}>{item.defaultUnit}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            onClick={() => handleDeleteItem(item.id)}
-                            variant="ghost"
-                            className="text-red-500 hover:bg-red-500/10 text-xs sm:text-sm"
-                          >
-                            DELETE
-                          </Button>
-                        </div>
+                        <span className="text-xs sm:text-sm text-green-400">of</span>
+                        <Select defaultValue={item.defaultUnit}>
+                          <SelectTrigger className="w-24 sm:w-32 bg-gray-700 border-green-500 text-xs sm:text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-gray-800 border-green-500">
+                            <SelectItem value={item.defaultUnit}>{item.defaultUnit}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          onClick={() => handleDeleteItem(item.id)}
+                          variant="ghost"
+                          className="text-red-500 hover:bg-red-500/10 text-xs sm:text-sm"
+                        >
+                          DELETE
+                        </Button>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  ))}
+                </div>
 
                 <div className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-0">
                   <Button onClick={handleAddChecked} className="bg-green-500 hover:bg-green-600 w-full sm:w-auto">
