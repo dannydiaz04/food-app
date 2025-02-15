@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
     experimental: {
-        serverExternalPackages: ['google-spreadsheet']
+        // Removed unsupported option "serverExternalPackages"
     },
     webpack: (config) => {
         config.experiments = {

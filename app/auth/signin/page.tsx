@@ -10,6 +10,8 @@ export default function SignIn() {
         password: '',
     });
 
+    console.log("credentials: ", credentials);
+
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {

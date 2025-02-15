@@ -4,29 +4,15 @@ import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 import bcrypt from 'bcryptjs';
 
-function getPrivateKey() {
-    const key = process.env.GOOGLE_PRIVATE_KEY!
-        .replace(/^"/, '') // Remove leading quote
-        .replace(/"$/, '') // Remove trailing quote
-        .replace(/-----BEGIN PRIVATE KEY-----\\/, '-----BEGIN PRIVATE KEY-----\n') // Fix beginning
-        .replace(/\\n/g, '\n'); // Replace remaining \n with actual newlines
-    return key;
-}
+// Create a JWT client using the service account credentials.
+const serviceAccountAuth = new JWT({
+    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL as string,
+    key: process.env.GOOGLE_PRIVATE_KEY as string,
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+});
 
-// Initialize Google Sheets
-const credentials = {
-    client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!,
-    private_key: getPrivateKey(),
-};
-
-const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID!, new JWT({
-    email: credentials.client_email,
-    key: credentials.private_key,
-    scopes: [
-        'https://www.googleapis.com/auth/spreadsheets',
-        'https://www.googleapis.com/auth/drive.file',
-    ],
-}));
+// Create a GoogleSpreadsheet instance using the JWT auth client.
+const doc = new GoogleSpreadsheet(process.env.GOOGLE_USERS_SHEET_ID as string, serviceAccountAuth);
 
 const handler = NextAuth({
     providers: [
@@ -41,30 +27,46 @@ const handler = NextAuth({
                     if (!credentials?.email || !credentials?.password) {
                         throw new Error('Please enter email and password');
                     }
-
-                    await doc.loadInfo();
-                    const sheet = doc.sheetsByIndex[0];
-                    const rows = await sheet.getRows();
                     
-                    const user = rows.find(row => row.get('email') === credentials.email);
+                    // Load the spreadsheet info using the JWT auth client.
+                    await doc.loadInfo();
+                    
+                    // Access the first sheet.
+                    const sheet = doc.sheetsByIndex[0];
+                    
+                    // Get rows with custom header mapping to handle duplicates
+                    const rows = await sheet.getRows({
+                        mapHeaders: (header: string) => {
+                            if (!header.trim()) return '';
+                            // Append a unique identifier to duplicate 'date' headers
+                            if (header === 'date') {
+                                return `date_${Math.random()}`;
+                            }
+                            return header;
+                        }
+                    });
+                    
+                    // Find the user row by directly accessing the email column
+                    const user = rows.find(row => row.email === credentials.email);
                     
                     if (!user) {
                         throw new Error('No user found with this email');
                     }
-
+                    
+                    // Compare the given password with the stored hashed password
                     const isPasswordValid = await bcrypt.compare(
-                        credentials.password, 
-                        user.get('password')
+                        credentials.password,
+                        user.password
                     );
-
+                    
                     if (!isPasswordValid) {
                         throw new Error('Invalid password');
                     }
-
+                    
                     return {
-                        id: user.get('id'),
-                        name: user.get('name'),
-                        email: user.get('email'),
+                        id: user.id,
+                        name: user.name,
+                        email: user.email,
                     };
                 } catch (error) {
                     console.error('Authorization error:', error);
@@ -92,7 +94,7 @@ const handler = NextAuth({
                 session.user.id = token.id as string;
             }
             return session;
-        },
+        }
     },
 });
 

@@ -1,33 +1,18 @@
 import { NextResponse } from 'next/server';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
+import bcrypt from 'bcrypt';
+import { formatPrivateKey } from '../../../../utils/google';
 
 function getCredentials() {
     const serviceAccount = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-    let privateKey = process.env.GOOGLE_PRIVATE_KEY;
+    const rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY;
     
-    if (!serviceAccount || !privateKey) {
+    if (!serviceAccount || !rawPrivateKey) {
         throw new Error('Missing required Google credentials in environment variables');
     }
 
-    // Extract just the private key portion using regex
-    const keyMatch = privateKey.match(/-----BEGIN PRIVATE KEY-----[\s\S]*?-----END PRIVATE KEY-----/);
-    if (!keyMatch) {
-        throw new Error('Invalid private key format');
-    }
-
-    // Clean up the private key string
-    const formattedKey = keyMatch[0]
-        .replace(/\\n/g, '\n')    // Replace \n with newlines
-        .replace(/\\\\/g, '')     // Remove double backslashes
-        .replace(/\\/g, '')       // Remove single backslashes
-        .replace(/"/g, '')        // Remove double quotes
-        .replace(/'/g, '')        // Remove single quotes
-        .split('\n')              // Split into lines
-        .map(line => line.trim()) // Trim each line
-        .join('\n')               // Join back with newlines
-        .trim();                  // Trim the whole string
-
+    const formattedKey = formatPrivateKey(rawPrivateKey);
     console.log('Formatted key:', formattedKey); // For debugging
 
     return {
@@ -87,12 +72,17 @@ export async function POST(request: Request) {
             );
         }
 
-        await sheet.addRow({
+        // Hash the password before storing it
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        console.log("Before adding row to the sheet");
+        const newRow = await sheet.addRow({
             id: Date.now().toString(),
             name,
             email,
-            password,
+            password: hashedPassword,
         });
+        console.log("After adding row to the sheet", newRow);
 
         return NextResponse.json(
             { message: 'User created successfully' },
