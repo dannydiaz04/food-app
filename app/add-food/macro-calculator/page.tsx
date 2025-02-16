@@ -67,7 +67,7 @@ export default function MacroCalculator() {
       setCalories(0)
 
       // Optionally redirect back to food diary
-      window.location.href = "/"
+      window.location.href = "/food-diary"
     } catch (error) {
       console.error('Error submitting food entry:', error)
       // Handle error (show error message to user)
@@ -85,7 +85,7 @@ export default function MacroCalculator() {
   return (
     <div className="min-h-screen bg-black p-4">
       <div className="max-w-md mx-auto">
-        <Link href="/">
+        <Link href="/food-diary">
           <Button variant="ghost" className="mb-4 text-green-400 hover:text-green-300 hover:bg-gray-800">
             <ChevronLeft className="mr-2 h-4 w-4" />
             Back to Food Diary
@@ -203,7 +203,7 @@ export default function MacroCalculator() {
                     setFats("")
                     setProtein("")
                     setCalories(0)
-                    window.location.href = "/"
+                    window.location.href = "/food-diary"
                   }}
                 >
                   CANCEL
