@@ -7,6 +7,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import Link from "next/link"
 import { format } from "date-fns"
+import SignOutButton from "@/components/SignOutButton"
 
 export default function FoodDiary() {
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -35,6 +36,7 @@ export default function FoodDiary() {
                 {item.label}
               </Link>
             ))}
+            <SignOutButton />
           </div>
           <Button
             variant="ghost"
@@ -60,6 +62,7 @@ export default function FoodDiary() {
               {item.label}
             </Link>
           ))}
+          <SignOutButton />
         </div>
       )}
 
