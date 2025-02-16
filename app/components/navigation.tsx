@@ -10,7 +10,7 @@ export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const navItems = [
-    { href: "/", label: "Food Diary" },
+    { href: "/food-diary", label: "Food Diary" },
     { href: "/database", label: "Database" },
     { href: "/my-foods", label: "My Foods" },
     { href: "/my-meals", label: "My Meals" },
