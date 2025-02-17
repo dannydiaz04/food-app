@@ -1,12 +1,13 @@
-import { Navigation } from "@/app/components/navigation"
-import { FoodDiary } from "@/app/components/food-diary"
+import { Navigation } from "@/components/navigation"
+import { FoodDiary } from "@/components/food-diary"
 
-export default function Home() {
+export default function FoodDiaryPage() {
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div>
       <Navigation />
-      <FoodDiary meal="breakfast" />
+      <main className="px-4 py-6 max-w-7xl mx-auto">
+        <FoodDiary />
+      </main>
     </div>
   )
 }
-
