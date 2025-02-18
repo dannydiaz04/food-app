@@ -155,7 +155,11 @@ export function FoodDiary({ meal }: FoodDiaryProps) {
                       <Plus className="h-4 w-4 mr-1" />
                       Add Food
                     </Button>
-                    <div className="relative" ref={(el) => dropdownRefs.current[section.name] = el}>
+                    <div className="relative" ref={(el) => {
+                      if (el) {
+                        dropdownRefs.current[section.name] = el;
+                      }
+                    }}>
                       <Button 
                         variant="ghost" 
                         size="sm" 
