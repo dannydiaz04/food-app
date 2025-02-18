@@ -11,11 +11,12 @@ interface MacroCalculatorProps {
   meal: string
   isOpen?: boolean
   onClose?: () => void
+  isPage?: boolean
 }
 
-export function MacroCalculator({ meal, isOpen = true, onClose }: MacroCalculatorProps) {
+export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false }: MacroCalculatorProps) {
   const [foodName, setFoodName] = useState("Custom Entry")
-  const [calories, setCalories] = useState(0)
+  const [calories, setCalories] = useState<number | ''>(0)
   const [carbs, setCarbs] = useState("")
   const [fats, setFats] = useState("")
   const [protein, setProtein] = useState("")
@@ -26,11 +27,6 @@ export function MacroCalculator({ meal, isOpen = true, onClose }: MacroCalculato
 
   // Toggle for showing micronutrient fields
   const [showMicronutrients, setShowMicronutrients] = useState(false)
-
-  // Example micronutrient fields
-  const [vitaminA, setVitaminA] = useState("")
-  const [vitaminC, setVitaminC] = useState("")
-  const [iron, setIron] = useState("")
 
   // Additional micronutrient state variables
   const [micronutrients, setMicronutrients] = useState({
@@ -69,7 +65,17 @@ export function MacroCalculator({ meal, isOpen = true, onClose }: MacroCalculato
     chromium: ""
   })
 
-  // Calculate calories from macros when not overidden.
+  // Update the override calories handler to clear the field when switching to manual
+  const handleOverrideCalories = () => {
+    setOverrideCalories(prev => {
+      if (!prev) {
+        setCalories('') // Clear the field when switching to manual
+      }
+      return !prev
+    })
+  }
+
+  // Calculate calories from macros when not overidden
   useEffect(() => {
     if (!overrideCalories) {
       const carbsCal = Number.parseFloat(carbs || "0") * 4
@@ -107,9 +113,11 @@ export function MacroCalculator({ meal, isOpen = true, onClose }: MacroCalculato
           quantity: 1,
           unit: "serving",
           calories,
-          carbs: Number(carbs),
-          fats: Number(fats),
-          protein: Number(protein),
+          // When the macros are optional during manual calorie entry,
+          // empty strings will convert to 0.
+          carbs: Number(carbs || 0),
+          fats: Number(fats || 0),
+          protein: Number(protein || 0),
           ...micronutrientsData,
           date: new Date().toISOString(),
         }),
@@ -119,7 +127,7 @@ export function MacroCalculator({ meal, isOpen = true, onClose }: MacroCalculato
         throw new Error("Failed to add food entry")
       }
 
-      // Reset form and close
+      // Reset form and close modal
       setFoodName("Custom Entry")
       setCarbs("")
       setFats("")
@@ -137,166 +145,179 @@ export function MacroCalculator({ meal, isOpen = true, onClose }: MacroCalculato
 
   if (!isOpen && onClose) return null
 
+  const content = (
+    <Card
+      className="w-full max-w-md mx-4 bg-gray-900 text-white border-green-500 max-h-[90vh] flex flex-col"
+    >
+      <CardContent className="pt-6 overflow-y-auto">
+        <h2 className="text-xl font-bold mb-4 text-green-400">
+          Macro Calculator – {meal}
+        </h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* FOOD NAME INPUT */}
+          <div className="space-y-2">
+            <Label htmlFor="foodName" className="text-green-400">
+              Food Name
+            </Label>
+            <Input
+              id="foodName"
+              type="text"
+              value={foodName}
+              onChange={(e) => setFoodName(e.target.value)}
+              placeholder="Custom Entry"
+              className="bg-gray-800 text-white border-green-500"
+            />
+          </div>
+
+          {/* CALORIES INPUT */}
+          <div className="space-y-2">
+            <Label htmlFor="calories" className="text-green-400">
+              Calories {overrideCalories ? "(manual)" : "(auto-calculated)"}
+            </Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="calories"
+                type="number"
+                value={calories}
+                onChange={(e) => setCalories(e.target.value ? Number(e.target.value) : '')}
+                disabled={!overrideCalories}
+                className="bg-gray-700 text-white border-green-500"
+                placeholder="Enter calories"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleOverrideCalories}
+                className="text-green-400"
+              >
+                {overrideCalories ? "Auto Calculate" : "Add Calories Manually"}
+              </Button>
+            </div>
+          </div>
+
+          {/* CARBOHYDRATES */}
+          <div className="space-y-2">
+            <Label htmlFor="carbs" className="text-green-400">
+              Carbohydrates (4 kcal/g)
+            </Label>
+            <Input
+              id="carbs"
+              type="number"
+              value={carbs}
+              onChange={(e) => setCarbs(e.target.value)}
+              className="bg-gray-800 text-white border-green-500"
+              min="0"
+              step="0.1"
+            />
+          </div>
+
+          {/* FATS */}
+          <div className="space-y-2">
+            <Label htmlFor="fats" className="text-green-400">
+              Fats (9 kcal/g)
+            </Label>
+            <Input
+              id="fats"
+              type="number"
+              value={fats}
+              onChange={(e) => setFats(e.target.value)}
+              className="bg-gray-800 text-white border-green-500"
+              min="0"
+              step="0.1"
+            />
+          </div>
+
+          {/* PROTEIN */}
+          <div className="space-y-2">
+            <Label htmlFor="protein" className="text-green-400">
+              Protein (4 kcal/g)
+            </Label>
+            <Input
+              id="protein"
+              type="number"
+              value={protein}
+              onChange={(e) => setProtein(e.target.value)}
+              className="bg-gray-800 text-white border-green-500"
+              min="0"
+              step="0.1"
+            />
+          </div>
+
+          {/* TOGGLE MICRONUTRIENTS BUTTON */}
+          <Button
+            type="button"
+            variant="ghost"
+            className="mt-2 text-green-400"
+            onClick={() => setShowMicronutrients((prev) => !prev)}
+          >
+            {showMicronutrients ? "Hide Vitamins & Minerals" : "Add Vitamins & Minerals"}
+          </Button>
+
+          {/* MICRONUTRIENT FIELDS */}
+          {showMicronutrients && (
+            <div className="space-y-4 pt-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(micronutrients).map(([nutrient, value]) => (
+                  <div key={nutrient} className="space-y-2">
+                    <Label htmlFor={nutrient} className="text-green-400">
+                      {nutrient.charAt(0).toUpperCase() + nutrient.slice(1)} {getUnit(nutrient)}
+                    </Label>
+                    <Input
+                      id={nutrient}
+                      type="number"
+                      value={value}
+                      onChange={(e) => handleMicronutrientChange(nutrient, e.target.value)}
+                      className="bg-gray-800 text-white border-green-500"
+                      min="0"
+                      step="0.1"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-4">
+            <Button
+              type="button"
+              onClick={onClose}
+              className="flex-1 border-green-500 text-blue-200 hover:bg-green-500 hover:text-white"
+            >
+              {isPage ? "Back to Food Diary" : "Cancel"}
+            </Button>
+            <Button
+              type="submit"
+              className={cn(
+                "flex-1 bg-green-500 text-white hover:bg-green-600",
+                (!overrideCalories && !carbs && !fats && !protein) && "opacity-50 cursor-not-allowed"
+              )}
+              disabled={!overrideCalories && (!carbs && !fats && !protein)}
+            >
+              Add to {meal}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  )
+
+  // If this is a page render, don't wrap in the modal backdrop
+  if (isPage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background py-6">
+        {content}
+      </div>
+    )
+  }
+
+  // For modal rendering, wrap in the backdrop div but remove the onClick handler
   return (
     <div
       className={cn(
-        onClose ? "fixed inset-0 bg-black/50 flex items-center justify-center z-50" : "w-full"
+        "fixed inset-0 bg-black/50 flex items-center justify-center z-50"
       )}
-      onClick={onClose}
     >
-      <Card
-        className="w-full max-w-md mx-4 bg-gray-900 text-white border-green-500 max-h-[90vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <CardContent className="pt-6 overflow-y-auto">
-          <h2 className="text-xl font-bold mb-4 text-green-400">
-            Macro Calculator – {meal}
-          </h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* FOOD NAME INPUT */}
-            <div className="space-y-2">
-              <Label htmlFor="foodName" className="text-green-400">
-                Food Name
-              </Label>
-              <Input
-                id="foodName"
-                type="text"
-                value={foodName}
-                onChange={(e) => setFoodName(e.target.value)}
-                placeholder="Custom Entry"
-                className="bg-gray-800 text-white border-green-500"
-              />
-            </div>
-
-            {/* CALORIES INPUT */}
-            <div className="space-y-2">
-              <Label htmlFor="calories" className="text-green-400">
-                Calories {overrideCalories ? "(manual)" : "(auto-calculated)"}
-              </Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="calories"
-                  type="number"
-                  value={calories}
-                  onChange={(e) => setCalories(Number(e.target.value))}
-                  disabled={!overrideCalories}
-                  className="bg-gray-700 text-white border-green-500"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setOverrideCalories(prev => !prev)}
-                  className="text-green-400"
-                >
-                  {overrideCalories ? "Auto Calculate" : "Customize"}
-                </Button>
-              </div>
-            </div>
-
-            {/* CARBOHYDRATES */}
-            <div className="space-y-2">
-              <Label htmlFor="carbs" className="text-green-400">
-                Carbohydrates (4 kcal/g)
-              </Label>
-              <Input
-                id="carbs"
-                type="number"
-                value={carbs}
-                onChange={(e) => setCarbs(e.target.value)}
-                className="bg-gray-800 text-white border-green-500"
-                min="0"
-                step="0.1"
-              />
-            </div>
-
-            {/* FATS */}
-            <div className="space-y-2">
-              <Label htmlFor="fats" className="text-green-400">
-                Fats (9 kcal/g)
-              </Label>
-              <Input
-                id="fats"
-                type="number"
-                value={fats}
-                onChange={(e) => setFats(e.target.value)}
-                className="bg-gray-800 text-white border-green-500"
-                min="0"
-                step="0.1"
-              />
-            </div>
-
-            {/* PROTEIN */}
-            <div className="space-y-2">
-              <Label htmlFor="protein" className="text-green-400">
-                Protein (4 kcal/g)
-              </Label>
-              <Input
-                id="protein"
-                type="number"
-                value={protein}
-                onChange={(e) => setProtein(e.target.value)}
-                className="bg-gray-800 text-white border-green-500"
-                min="0"
-                step="0.1"
-              />
-            </div>
-
-            {/* TOGGLE MICRONUTRIENTS BUTTON */}
-            <Button
-              type="button"
-              variant="ghost"
-              className="mt-2 text-green-400"
-              onClick={() => setShowMicronutrients((prev) => !prev)}
-            >
-              {showMicronutrients ? "Hide Vitamins & Minerals" : "Add Vitamins & Minerals"}
-            </Button>
-
-            {/* MICRONUTRIENT FIELDS */}
-            {showMicronutrients && (
-              <div className="space-y-4 pt-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(micronutrients).map(([nutrient, value]) => (
-                    <div key={nutrient} className="space-y-2">
-                      <Label htmlFor={nutrient} className="text-green-400">
-                        {nutrient.charAt(0).toUpperCase() + nutrient.slice(1)} {getUnit(nutrient)}
-                      </Label>
-                      <Input
-                        id={nutrient}
-                        type="number"
-                        value={value}
-                        onChange={(e) => handleMicronutrientChange(nutrient, e.target.value)}
-                        className="bg-gray-800 text-white border-green-500"
-                        min="0"
-                        step="0.1"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-2 pt-4">
-              <Button
-                type="button"
-                onClick={onClose}
-                className="flex-1 border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className={cn(
-                  "flex-1 bg-green-500 text-white hover:bg-green-600",
-                  (!carbs && !fats && !protein) && "opacity-50 cursor-not-allowed"
-                )}
-                disabled={!carbs && !fats && !protein}
-              >
-                Add to {meal}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+      {content}
     </div>
   )
 }

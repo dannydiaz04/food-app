@@ -31,7 +31,9 @@ export function Navigation() {
                 {item.label}
               </Link>
             ))}
-            <SignOutButton />
+            <div className="text-green-400 hover:text-green-300">
+              <SignOutButton />
+            </div>
           </div>
           <Button
             variant="ghost"
@@ -57,7 +59,9 @@ export function Navigation() {
               {item.label}
             </Link>
           ))}
-          <SignOutButton />
+          <div className="text-green-400 hover:text-green-300">
+            <SignOutButton />
+          </div>
         </div>
       )}
     </>

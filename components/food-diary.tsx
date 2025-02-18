@@ -122,18 +122,25 @@ export function FoodDiary({ meal }: FoodDiaryProps) {
     console.log("=== handleMacroCalculatorClick END ===");
   };
 
+  const isMobile = () => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth <= 768;
+    }
+    return false;
+  };
+
   return (
     <>
       <Card className="w-full">
         <CardHeader className="border-b">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-lg font-semibold">Your Food Diary For:</div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="icon" onClick={() => navigateDate(-1)}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-md">
-                <span className="font-medium">{formatDate(currentDate)}</span>
+                <span className="font-medium text-sm sm:text-base">{formatDate(currentDate)}</span>
                 <Calendar className="h-4 w-4 text-primary" />
               </div>
               <Button variant="outline" size="icon" onClick={() => navigateDate(1)}>
@@ -143,19 +150,19 @@ export function FoodDiary({ meal }: FoodDiaryProps) {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="grid gap-6 p-6">
+          <div className="grid gap-6 p-2 sm:p-6">
             {mealSections.map((section) => (
               <div key={section.name} className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <h3 className="text-lg font-semibold">
                     {section.name.charAt(0).toUpperCase() + section.name.slice(1)}
                   </h3>
                   <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" className="text-primary">
+                    <Button variant="ghost" size="sm" className="text-primary flex-1 sm:flex-none">
                       <Plus className="h-4 w-4 mr-1" />
                       Add Food
                     </Button>
-                    <div className="relative" ref={(el) => {
+                    <div className="relative flex-1 sm:flex-none" ref={(el) => {
                       if (el) {
                         dropdownRefs.current[section.name] = el;
                       }
@@ -195,32 +202,34 @@ export function FoodDiary({ meal }: FoodDiaryProps) {
                     </div>
                   </div>
                 </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[300px]">Food</TableHead>
-                      <TableHead className="text-right">Calories</TableHead>
-                      <TableHead className="text-right">Carbs (g)</TableHead>
-                      <TableHead className="text-right">Fat (g)</TableHead>
-                      <TableHead className="text-right">Protein (g)</TableHead>
-                      <TableHead className="text-right">Sodium (mg)</TableHead>
-                      <TableHead className="text-right">Sugar (g)</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {section.items.length === 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground">
-                          No foods added yet
-                        </TableCell>
+                        <TableHead className="w-[140px] sm:w-[300px]">Food</TableHead>
+                        <TableHead className="text-right">Cal</TableHead>
+                        <TableHead className="text-right">Carbs</TableHead>
+                        <TableHead className="text-right">Fat</TableHead>
+                        <TableHead className="text-right">Prot</TableHead>
+                        <TableHead className="text-right hidden sm:table-cell">Sodium</TableHead>
+                        <TableHead className="text-right hidden sm:table-cell">Sugar</TableHead>
                       </TableRow>
-                    ) : null}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {section.items.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center text-muted-foreground">
+                            No foods added yet
+                          </TableCell>
+                        </TableRow>
+                      ) : null}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             ))}
 
-            <div className="border-t pt-6">
+            <div className="border-t pt-6 overflow-x-auto">
               <Table>
                 <TableBody>
                   <TableRow>
@@ -229,17 +238,17 @@ export function FoodDiary({ meal }: FoodDiaryProps) {
                     <TableCell className="text-right">0</TableCell>
                     <TableCell className="text-right">0</TableCell>
                     <TableCell className="text-right">0</TableCell>
-                    <TableCell className="text-right">0</TableCell>
-                    <TableCell className="text-right">0</TableCell>
+                    <TableCell className="text-right hidden sm:table-cell">0</TableCell>
+                    <TableCell className="text-right hidden sm:table-cell">0</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="font-medium">Your Daily Goal</TableCell>
+                    <TableCell className="font-medium">Daily Goal</TableCell>
                     <TableCell className="text-right">{dailyGoals.calories}</TableCell>
                     <TableCell className="text-right">{dailyGoals.carbs}</TableCell>
                     <TableCell className="text-right">{dailyGoals.fat}</TableCell>
                     <TableCell className="text-right">{dailyGoals.protein}</TableCell>
-                    <TableCell className="text-right">{dailyGoals.sodium}</TableCell>
-                    <TableCell className="text-right">{dailyGoals.sugar}</TableCell>
+                    <TableCell className="text-right hidden sm:table-cell">{dailyGoals.sodium}</TableCell>
+                    <TableCell className="text-right hidden sm:table-cell">{dailyGoals.sugar}</TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell className="font-medium">Remaining</TableCell>
@@ -247,8 +256,8 @@ export function FoodDiary({ meal }: FoodDiaryProps) {
                     <TableCell className="text-right">{dailyGoals.carbs}</TableCell>
                     <TableCell className="text-right">{dailyGoals.fat}</TableCell>
                     <TableCell className="text-right">{dailyGoals.protein}</TableCell>
-                    <TableCell className="text-right">{dailyGoals.sodium}</TableCell>
-                    <TableCell className="text-right">{dailyGoals.sugar}</TableCell>
+                    <TableCell className="text-right hidden sm:table-cell">{dailyGoals.sodium}</TableCell>
+                    <TableCell className="text-right hidden sm:table-cell">{dailyGoals.sugar}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
