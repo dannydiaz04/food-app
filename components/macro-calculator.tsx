@@ -14,10 +14,15 @@ interface MacroCalculatorProps {
 }
 
 export function MacroCalculator({ meal, isOpen = true, onClose }: MacroCalculatorProps) {
+  const [foodName, setFoodName] = useState("Custom Entry")
   const [calories, setCalories] = useState(0)
   const [carbs, setCarbs] = useState("")
   const [fats, setFats] = useState("")
   const [protein, setProtein] = useState("")
+
+  // Toggle to allow manual editing of calories.
+  // When false, calories will auto-calculate.
+  const [overrideCalories, setOverrideCalories] = useState(false)
 
   // Toggle for showing micronutrient fields
   const [showMicronutrients, setShowMicronutrients] = useState(false)
@@ -64,15 +69,17 @@ export function MacroCalculator({ meal, isOpen = true, onClose }: MacroCalculato
     chromium: ""
   })
 
-  // Calculate calories whenever macros change
+  // Calculate calories from macros when not overidden.
   useEffect(() => {
-    const carbsCal = Number.parseFloat(carbs || "0") * 4
-    const proteinCal = Number.parseFloat(protein || "0") * 4
-    const fatsCal = Number.parseFloat(fats || "0") * 9
+    if (!overrideCalories) {
+      const carbsCal = Number.parseFloat(carbs || "0") * 4
+      const proteinCal = Number.parseFloat(protein || "0") * 4
+      const fatsCal = Number.parseFloat(fats || "0") * 9
 
-    const total = carbsCal + proteinCal + fatsCal
-    setCalories(Math.round(total))
-  }, [carbs, protein, fats])
+      const total = carbsCal + proteinCal + fatsCal
+      setCalories(Math.round(total))
+    }
+  }, [carbs, protein, fats, overrideCalories])
 
   const handleMicronutrientChange = (nutrient: string, value: string) => {
     setMicronutrients(prev => ({
@@ -96,7 +103,7 @@ export function MacroCalculator({ meal, isOpen = true, onClose }: MacroCalculato
         },
         body: JSON.stringify({
           meal,
-          foodName: "Custom Entry",
+          foodName: foodName || "Custom Entry",
           quantity: 1,
           unit: "serving",
           calories,
@@ -113,10 +120,12 @@ export function MacroCalculator({ meal, isOpen = true, onClose }: MacroCalculato
       }
 
       // Reset form and close
+      setFoodName("Custom Entry")
       setCarbs("")
       setFats("")
       setProtein("")
       setCalories(0)
+      setOverrideCalories(false)
       setMicronutrients(Object.fromEntries(
         Object.keys(micronutrients).map(key => [key, ""])
       ))
@@ -144,21 +153,47 @@ export function MacroCalculator({ meal, isOpen = true, onClose }: MacroCalculato
             Macro Calculator – {meal}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* CALORIES (auto-calc) */}
+            {/* FOOD NAME INPUT */}
             <div className="space-y-2">
-              <Label htmlFor="calories" className="text-green-400">
-                Calories (auto-calculated)
+              <Label htmlFor="foodName" className="text-green-400">
+                Food Name
               </Label>
               <Input
-                id="calories"
-                type="number"
-                value={calories}
-                disabled
-                className="bg-gray-700 text-white border-green-500"
+                id="foodName"
+                type="text"
+                value={foodName}
+                onChange={(e) => setFoodName(e.target.value)}
+                placeholder="Custom Entry"
+                className="bg-gray-800 text-white border-green-500"
               />
             </div>
 
-            {/* CARBS */}
+            {/* CALORIES INPUT */}
+            <div className="space-y-2">
+              <Label htmlFor="calories" className="text-green-400">
+                Calories {overrideCalories ? "(manual)" : "(auto-calculated)"}
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="calories"
+                  type="number"
+                  value={calories}
+                  onChange={(e) => setCalories(Number(e.target.value))}
+                  disabled={!overrideCalories}
+                  className="bg-gray-700 text-white border-green-500"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setOverrideCalories(prev => !prev)}
+                  className="text-green-400"
+                >
+                  {overrideCalories ? "Auto Calculate" : "Customize"}
+                </Button>
+              </div>
+            </div>
+
+            {/* CARBOHYDRATES */}
             <div className="space-y-2">
               <Label htmlFor="carbs" className="text-green-400">
                 Carbohydrates (4 kcal/g)
@@ -252,7 +287,7 @@ export function MacroCalculator({ meal, isOpen = true, onClose }: MacroCalculato
                 type="submit"
                 className={cn(
                   "flex-1 bg-green-500 text-white hover:bg-green-600",
-                  !carbs && !fats && !protein && "opacity-50 cursor-not-allowed"
+                  (!carbs && !fats && !protein) && "opacity-50 cursor-not-allowed"
                 )}
                 disabled={!carbs && !fats && !protein}
               >

@@ -10,16 +10,23 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Prepare the row data for the "food" table.
-    // Ensure your Supabase "food" table has matching columns:
-    // date, meal, foodname, quantity, unit, calories, carbs, fats, protein, etc.
+    // Auto-calculate calories if not provided.
+    // Each gram of carbohydrate and protein gives 4 calories, and each gram of fat gives 9 calories.
+    let autoCalculatedCalories = 0;
+    if (!body.calories) {
+      autoCalculatedCalories =
+        ((body.carbs ? Number(body.carbs) : 0) * 4) +
+        ((body.protein ? Number(body.protein) : 0) * 4) +
+        ((body.fats ? Number(body.fats) : 0) * 9);
+    }
+
     const newRow = {
       date: body.date || new Date().toISOString(),
       meal: body.meal,
-      foodName: body.foodName || "Custom Entry", // Adjust the column names as needed.
+      foodName: body.foodName || "Custom Entry",
       quantity: body.quantity ? Number(body.quantity) : 1,
       unit: body.unit || "serving",
-      calories: body.calories,
+      calories: body.calories || autoCalculatedCalories,
       carbs: body.carbs,
       fats: body.fats,
       protein: body.protein,
