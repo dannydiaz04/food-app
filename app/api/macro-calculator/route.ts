@@ -1,77 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleSpreadsheet } from 'google-spreadsheet';
+import { createClient } from "@supabase/supabase-js";
 
-// Make sure these exist in your .env.local file
-// and are available at runtime on your server:
-const {
-  GOOGLE_FOOD_SHEET_NAME,
-  GOOGLE_FOOD_SHEET_ID,
-  GOOGLE_CLIENT_EMAIL,
-  GOOGLE_PRIVATE_KEY,
-} = process.env;
-
-// Re-use the Sheets client in memory to avoid re-instantiating
-let sheetsClient: any;
-
-async function getSheetsClient() {
-  if (!sheetsClient) {
-    // Service account auth with private key
-    const auth = new google.auth.JWT(
-      GOOGLE_CLIENT_EMAIL,
-      undefined,
-      // Replace escaped newlines in private key (common in .env files)
-      (GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
-      ["https://www.googleapis.com/auth/spreadsheets"] // required scope
-    );
-
-    sheetsClient = google.sheets({ version: "v4", auth });
-  }
-  return sheetsClient;
-}
+// Initialize a Supabase client using the service role key on the server.
+const supabaseUrl = process.env.SUPABASE_URL as string;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Initialize the GoogleSpreadsheet instance using your FOOD sheet ID.
-    const doc = new GoogleSpreadsheet(process.env.GOOGLE_FOOD_SHEET_ID as string);
-
-    // Use your service account credentials.
-    await doc.useServiceAccountAuth({
-      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL as string,
-      // Ensure proper formatting of the private key (replace literal \n with actual line breaks)
-      private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    });
-
-    await doc.loadInfo();
-
-    // Get the sheet titled "food" (make sure this sheet exists in your Google Spreadsheet)
-    const sheet = doc.sheetsByTitle["food"];
-    if (!sheet) {
-      throw new Error('Food sheet not found');
-    }
-
-    // Prepare the row data.
+    // Prepare the row data for the "food" table.
+    // Ensure your Supabase "food" table has matching columns:
+    // date, meal, foodname, quantity, unit, calories, carbs, fats, protein, etc.
     const newRow = {
       date: body.date || new Date().toISOString(),
       meal: body.meal,
-      foodName: body.foodName || "Custom Entry",
-      quantity: body.quantity ? String(body.quantity) : "1",
+      foodname: body.foodName || "Custom Entry", // Adjust the column names as needed.
+      quantity: body.quantity ? Number(body.quantity) : 1,
       unit: body.unit || "serving",
       calories: body.calories,
       carbs: body.carbs,
       fats: body.fats,
       protein: body.protein,
-      // Spread any additional micronutrient fields.
+      // Assumes that the keys in body.micronutrients match your DB column names.
       ...body.micronutrients,
     };
 
-    // Add the new row.
-    await sheet.addRow(newRow);
+    const { error } = await supabase
+      .from("food")
+      .insert(newRow);
+
+    if (error) {
+      console.error("Failed to insert food entry:", error);
+      return NextResponse.json(
+        { error: error.message || "Failed to add food entry" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ message: "Food entry added successfully!" });
   } catch (error: any) {
     console.error("Failed to add food entry:", error);
-    return NextResponse.json({ error: error.message || "Failed to add food entry" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Failed to add food entry" },
+      { status: 500 }
+    );
   }
 }

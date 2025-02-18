@@ -1,120 +1,138 @@
-import NextAuth from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
-import { GoogleSpreadsheet } from "google-spreadsheet"
-import { JWT } from "google-auth-library"
-import bcrypt from "bcryptjs"
+import NextAuth from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
+import { createClient } from "@supabase/supabase-js";
 
-// Create a JWT client using the service account credentials
-const serviceAccountAuth = new JWT({
-  email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL as string,
-  key: process.env.GOOGLE_PRIVATE_KEY as string,
-  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-})
-
-// Create a GoogleSpreadsheet instance using the JWT auth client
-const doc = new GoogleSpreadsheet(process.env.GOOGLE_USERS_SHEET_ID as string, serviceAccountAuth)
+// 1. Initialize your Supabase client using the service role key
+const supabaseUrl = process.env.SUPABASE_URL as string;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 const authOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
-      // The shape of your credentials is up to you. 
-      // But typically we define the fields you'd expect in signIn("credentials", {...})
       credentials: {
-        email: { label: "Email", type: "email" },
+        email: { label: "Email", type: "email", placeholder: "you@example.com" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials, req) {
         try {
           if (!credentials?.email || !credentials?.password) {
-            throw new Error("Please enter email and password")
+            throw new Error("Please provide both email and password.");
           }
 
-          // Load the spreadsheet
-          await doc.loadInfo()
+          // 2. See if the request is intended to sign up OR sign in.
+          //    - You can detect this in various ways, e.g., by checking
+          //      a body parameter like `type: "signup"` or “signin”.
+          //    - For demonstration, we'll assume your front-end sends 
+          //      a param: credentials?.isSignUp.
+          const isSignUp = req.body?.isSignUp; 
+          const { email, password } = credentials;
 
-          // Access the 'users' sheet by title
-          const sheet = doc.sheetsByTitle["users"]
-          const rows = await sheet.getRows({
-            mapHeaders: (header: string, index: number) => {
-              if (!header.trim()) return ""
-              if (header.toLowerCase().trim() === "date") {
-                return `date_${index}`
-              }
-              if (["email", "password", "name", "id"].includes(header.toLowerCase().trim())) {
-                return header.toLowerCase().trim()
-              }
-              return header.toLowerCase().trim()
-            },
-          })
+          // 3. If it's a sign-up request:
+          //    - Check if user already exists.
+          //    - If not, create a new user with a hashed password.
+          if (isSignUp) {
+            const { data: existingUser } = await supabase
+              .from("users")
+              .select("id, email")
+              .eq("email", email)
+              .single();
 
-          // Find the row that matches this email
-          const user = rows.find((row) => {
-            // Figure out which index is the 'email' column
-            const emailIndex = sheet.headerValues.findIndex((header) =>
-              header.toLowerCase().includes("email"),
-            )
-            const rowEmail = row._rawData[emailIndex]
-            return rowEmail === credentials.email
-          })
+            if (existingUser) {
+              throw new Error("A user with this email already exists.");
+            }
 
-          if (!user) {
-            throw new Error("No user found with this email")
-          }
+            // Hash the password before storing
+            const hashedPassword = await bcrypt.hash(password, 10);
 
-          // Now get the password from that row
-          const passwordIndex = sheet.headerValues.findIndex((header) =>
-            header.toLowerCase().includes("password"),
-          )
-          const storedHash = user._rawData[passwordIndex] // the hashed password in the sheet
+            // Insert the new user into the database
+            const { data: newUser, error: insertError } = await supabase
+              .from("users")
+              .insert([
+                { email, password: hashedPassword }, // Adjust columns as needed
+              ])
+              .select("*")
+              .single();
 
-          // Compare the given password with the stored hashed password
-          const isPasswordValid = await bcrypt.compare(credentials.password, storedHash)
-          if (!isPasswordValid) {
-            throw new Error("Invalid password")
-          }
+            if (insertError || !newUser) {
+              console.error("Sign-up insert error:", insertError);
+              throw new Error("Error creating new user.");
+            }
 
-          // If password is valid, return the user object
-          // NextAuth will store this in `user` param of callbacks.jwt, etc.
-          return {
-            id: user.id,       // from the row's "id" property if it exists
-            name: user.name,   // from the row's "name" property
-            email: user.email, // from the row's "email"
+            // Return the newly created user data (NextAuth attaches it to the JWT)
+            return {
+              id: newUser.id,
+              email: newUser.email,
+              // Add any other columns from your "users" table as needed
+            };
+          } else {
+            // 4. If it's a sign-in request:
+            //    - Find user by email and compare the provided password with the stored hashed password.
+            const { data: user, error } = await supabase
+              .from("users")
+              .select("id, email, password")
+              .eq("email", email)
+              .single();
+
+            if (!user || error) {
+              throw new Error("No user found with this email.");
+            }
+
+            // Compare the hashed password
+            const isPasswordValid = await bcrypt.compare(password, user.password);
+            if (!isPasswordValid) {
+              throw new Error("Invalid credentials.");
+            }
+
+            // Return user object if password is valid
+            return {
+              id: user.id,
+              email: user.email,
+              // Add any other columns you want to include in the JWT/session
+            };
           }
         } catch (error) {
-          console.error("Authorization error:", error)
-          throw new Error("Invalid login") // triggers an error in the client
+          console.error("Authorization error:", error);
+          throw error;
         }
       },
     }),
   ],
+
   pages: {
     signIn: "/auth/signin",
-    signUp: "/auth/signup",
+    // If you have a custom sign-up page, you can define it here:
+    // signUp: "/auth/signup",
   },
+
   session: {
     strategy: "jwt",
   },
+
   callbacks: {
-    async jwt({ token, user }) {
-      // If user is returned (i.e., the user just signed in), attach user info to the token
+    async jwt({ token, user }: { token: any, user: any }) {
+      // If user object exists, it means a successful sign-in or sign-up
       if (user) {
-        token.id = user.id
+        token.id = user.id;
+        // Add other properties to the token if desired
       }
-      return token
+      return token;
     },
-    async session({ session, token }) {
-      // Make the user's ID available on session.user
+
+    async session({ session, token }: { session: any, token: any }) {
+      // Pass user ID (and/or other info) to the client in session
       if (session.user) {
-        session.user.id = token.id as string
+        session.user.id = token.id;
       }
-      return session
+      return session;
     },
   },
-  // You should have a NEXTAUTH_SECRET in .env as well
+
+  // Add your NEXTAUTH_SECRET in .env
   secret: process.env.NEXTAUTH_SECRET,
-}
+};
 
-const handler = NextAuth(authOptions)
-
-export { handler as GET, handler as POST }
+const handler = NextAuth(authOptions);
+export { handler as GET, handler as POST };

@@ -1,97 +1,64 @@
-import { NextResponse } from 'next/server';
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { JWT } from 'google-auth-library';
-import bcrypt from 'bcrypt';
-import { formatPrivateKey } from '../../../../utils/google';
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import bcrypt from "bcryptjs";
 
-function getCredentials() {
-    const serviceAccount = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-    const rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY;
-    
-    if (!serviceAccount || !rawPrivateKey) {
-        throw new Error('Missing required Google credentials in environment variables');
-    }
+const supabase = createClient(
+    process.env.SUPABASE_URL! as string,
+    process.env.SUPABASE_SERVICE_ROLE_KEY! as string
+);
 
-    const formattedKey = formatPrivateKey(rawPrivateKey);
-    console.log('Formatted key:', formattedKey); // For debugging
-
-    return {
-        client_email: serviceAccount,
-        private_key: formattedKey,
-    };
-}
-
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     try {
-        const { name, email, password } = await request.json();
+        // 1. Parse the request body
+        const { email, password } = await request.json();
 
-        if (!name || !email || !password) {
+        if (!email || !password) {
             return NextResponse.json(
-                { message: 'Missing required fields' },
+                { error: "Email and password are required" },
                 { status: 400 }
             );
         }
 
-        const credentials = getCredentials();
-        
-        // Debug log without JSON.stringify
-        console.log('credentials.private_key:', credentials.private_key);
-        
-        // Create JWT with the raw string
-        const jwt = new JWT({
-            email: credentials.client_email,
-            key: credentials.private_key,
-            scopes: [
-                'https://www.googleapis.com/auth/spreadsheets',
-                'https://www.googleapis.com/auth/drive.file',
-            ],
-        });
+        // 2. Check if user already exists
+        const { data: existingUser} = await supabase
+            .from("users")
+            .select("*")
+            .eq("email", email)
+            .single();
 
-        const doc = new GoogleSpreadsheet(process.env.GOOGLE_USERS_SHEET_ID!, jwt);
-        
-        // If you need to log the doc object, use a custom replacer function
-        console.log('doc:', JSON.stringify(doc, null, 2));
-
-        await doc.loadInfo();
-        
-        const sheet = doc.sheetsByTitle[process.env.GOOGLE_USERS_SHEET_NAME!];
-        
-        if (!sheet) {
-            console.error('Sheet not found:', process.env.GOOGLE_USERS_SHEET_NAME);
+        if (existingUser) {
             return NextResponse.json(
-                { message: 'Configuration error: Sheet not found' },
-                { status: 500 }
-            );
-        }
-
-        const rows = await sheet.getRows();
-        if (rows.some(row => row.get('email') === email)) {
-            return NextResponse.json(
-                { message: 'User already exists' },
+                { error: "A user with this email already exists" },
                 { status: 400 }
             );
         }
 
-        // Hash the password before storing it
+        // 3. Hash the password before storing 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        console.log("Before adding row to the sheet");
-        const newRow = await sheet.addRow({
-            id: Date.now().toString(),
-            name,
-            email,
-            password: hashedPassword,
-        });
-        console.log("After adding row to the sheet", newRow);
+        // 4, Insert the new user
+        const { data: newUser, error: insertError } = await supabase
+            .from("users")
+            .insert([
+                { email, password: hashedPassword }
+            ])
+            .select()
+            .single();
 
+        if (insertError || !newUser) {
+            console.error("Sign-up insert error:", insertError);
+            throw new Error("Error creating new user.");
+        }
+
+        // 5. Return success
         return NextResponse.json(
-            { message: 'User created successfully' },
+            { message: "User created successfully" },
             { status: 201 }
         );
     } catch (error) {
-        console.error('Signup error:', error);
+        console.error("Sign-up error:", error);
         return NextResponse.json(
-            { message: 'Error creating user', error: String(error) },
+            { error: "An error occurred during sign-up" },
             { status: 500 }
         );
     }
