@@ -38,7 +38,16 @@ export async function GET(request: NextRequest) {
     // Get recent foods for the user, ordered by most recent first
     const { data: recentFoods, error } = await supabase
       .from("food")
-      .select("id, foodName, quantity, unit")
+      .select(`
+        food_ky,
+        foodName,
+        quantity,
+        unit,
+        calories,
+        carbs,
+        fats,
+        protein
+      `)
       .eq("userId", userData.id)
       .order("created_at", { ascending: false })
       .limit(10)
@@ -46,6 +55,13 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error("Error fetching foods:", error)
       throw error
+    }
+
+    // Log the data to see what we're getting
+    console.log("Recent foods data:", recentFoods)
+
+    if (!recentFoods) {
+      return NextResponse.json([])
     }
 
     return NextResponse.json(recentFoods)

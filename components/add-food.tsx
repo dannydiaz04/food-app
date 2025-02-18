@@ -11,10 +11,14 @@ import { AlertCircle, Loader2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface FoodItem {
-  id: string
+  food_ky: string
   foodName: string
   quantity: number
   unit: string
+  calories: number
+  carbs: number
+  fats: number
+  protein: number
 }
 
 interface AddFoodProps {
@@ -31,15 +35,23 @@ export function AddFood({ meal }: AddFoodProps) {
   useEffect(() => {
     const fetchRecentFoods = async () => {
       try {
+        setLoading(true)
         setError(null)
-        const response = await fetch("/api/recent-foods")
+        
+        const response = await fetch("/api/recent-foods", {
+          credentials: 'include', // Include credentials for authentication
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+
+        const data = await response.json()
+        console.log("Fetched food data:", data)
         
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to fetch recent foods")
+          throw new Error(data.error || "Failed to fetch recent foods")
         }
-        
-        const data = await response.json()
+
         setRecentFoods(data)
       } catch (err) {
         console.error("Error fetching recent foods:", err)
@@ -141,16 +153,24 @@ export function AddFood({ meal }: AddFoodProps) {
                       <TableRow>
                         <TableHead className="w-[30px]"></TableHead>
                         <TableHead>Description</TableHead>
+                        <TableHead className="text-right">Calories</TableHead>
+                        <TableHead className="text-right">Carbs (g)</TableHead>
+                        <TableHead className="text-right">Fats (g)</TableHead>
+                        <TableHead className="text-right">Protein (g)</TableHead>
                         <TableHead>Serving</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {recentFoods.map((food) => (
-                        <TableRow key={food.id}>
+                        <TableRow key={food.food_ky}>
                           <TableCell>
                             <input type="checkbox" className="rounded border-gray-300" />
                           </TableCell>
                           <TableCell>{food.foodName}</TableCell>
+                          <TableCell className="text-right">{food.calories}</TableCell>
+                          <TableCell className="text-right">{food.carbs}</TableCell>
+                          <TableCell className="text-right">{food.fats}</TableCell>
+                          <TableCell className="text-right">{food.protein}</TableCell>
                           <TableCell>{food.quantity} {food.unit}</TableCell>
                         </TableRow>
                       ))}
