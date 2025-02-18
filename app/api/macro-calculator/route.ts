@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 // Initialize a Supabase client using the service role key on the server.
 const supabaseUrl = process.env.SUPABASE_URL as string;
@@ -8,6 +10,30 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: "You must be signed in to add food entries" },
+        { status: 401 }
+      );
+    }
+
+    // Get the user's ID from Supabase using their email
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', session.user.email)
+      .single();
+
+    if (userError || !userData) {
+      console.error("Error finding user:", userError);
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
     const body = await request.json();
 
     // Auto-calculate calories if not provided.
@@ -21,6 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     const newRow = {
+      userId: userData.id,
       date: body.date || new Date().toISOString(),
       meal: body.meal,
       foodName: body.foodName || "Custom Entry",

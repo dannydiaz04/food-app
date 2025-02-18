@@ -158,9 +158,16 @@ export function FoodDiary({ meal }: FoodDiaryProps) {
                     {section.name.charAt(0).toUpperCase() + section.name.slice(1)}
                   </h3>
                   <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" className="text-primary flex-1 sm:flex-none">
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add Food
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-primary flex-1 sm:flex-none"
+                      asChild
+                    >
+                      <Link href={`/add-food/${section.name.toLowerCase()}`}>
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add Food
+                      </Link>
                     </Button>
                     <div className="relative flex-1 sm:flex-none" ref={(el) => {
                       if (el) {

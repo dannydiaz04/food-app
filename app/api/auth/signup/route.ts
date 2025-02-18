@@ -10,7 +10,7 @@ const supabase = createClient(
 export async function POST(request: NextRequest) {
     try {
         // 1. Parse the request body
-        const { email, password } = await request.json();
+        const { name, email, password } = await request.json();
 
         if (!email || !password) {
             return NextResponse.json(
@@ -36,11 +36,15 @@ export async function POST(request: NextRequest) {
         // 3. Hash the password before storing 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // 4, Insert the new user
+        // 4, Insert the new user with name
         const { data: newUser, error: insertError } = await supabase
             .from("users")
             .insert([
-                { email, password: hashedPassword }
+                { 
+                    email, 
+                    password: hashedPassword,
+                    name: name || null // Include name field, but allow it to be null
+                }
             ])
             .select()
             .single();

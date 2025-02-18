@@ -1,20 +1,17 @@
-import { FoodDiary } from "@/components/food-diary"
 import { Navigation } from "@/components/navigation"
-import { redirect } from "next/navigation"
+import { AddFood } from "@/components/add-food"
 
-export default function AddFood({ params }: { params: { meal: string } }) {
-  // Define the valid meal options
-  const validMeals = ["breakfast", "lunch", "dinner", "snacks"]
-
-  // Check if the provided meal is valid, if not redirect
-  if (!validMeals.includes(params.meal.toLowerCase())) {
-    redirect("/food-diary")
-  }
-
+export default function AddFoodPage({
+  params
+}: {
+  params: { meal: string }
+}) {
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background">
       <Navigation />
-      <FoodDiary meal={params.meal.toLowerCase()} />
+      <main className="px-4 py-6 max-w-7xl mx-auto">
+        <AddFood meal={params.meal} />
+      </main>
     </div>
   )
 }
