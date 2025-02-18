@@ -21,6 +21,12 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false }
   const [fats, setFats] = useState("")
   const [protein, setProtein] = useState("")
 
+  // New: Date state
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split("T")[0]; // format: YYYY-MM-DD
+  })
+
   // Toggle to allow manual editing of calories.
   // When false, calories will auto-calculate.
   const [overrideCalories, setOverrideCalories] = useState(false)
@@ -67,7 +73,7 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false }
 
   // Update the override calories handler to clear the field when switching to manual
   const handleOverrideCalories = () => {
-    setOverrideCalories(prev => {
+    setOverrideCalories((prev) => {
       if (!prev) {
         setCalories('') // Clear the field when switching to manual
       }
@@ -88,7 +94,7 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false }
   }, [carbs, protein, fats, overrideCalories])
 
   const handleMicronutrientChange = (nutrient: string, value: string) => {
-    setMicronutrients(prev => ({
+    setMicronutrients((prev) => ({
       ...prev,
       [nutrient]: value
     }))
@@ -97,15 +103,21 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const micronutrientsData = Object.entries(micronutrients).reduce((acc, [key, value]) => ({
-        ...acc,
-        [key]: value ? Number(value) : null
-      }), {})
+      const micronutrientsData = Object.entries(micronutrients).reduce(
+        (acc, [key, value]) => ({
+          ...acc,
+          [key]: value ? Number(value) : null
+        }),
+        {}
+      )
+
+      // Convert the selected date to ISO format
+      const entryDate = new Date(selectedDate).toISOString()
 
       const response = await fetch("/api/macro-calculator", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           meal,
@@ -119,8 +131,8 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false }
           fats: Number(fats || 0),
           protein: Number(protein || 0),
           ...micronutrientsData,
-          date: new Date().toISOString(),
-        }),
+          date: entryDate
+        })
       })
 
       if (!response.ok) {
@@ -134,9 +146,9 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false }
       setProtein("")
       setCalories(0)
       setOverrideCalories(false)
-      setMicronutrients(Object.fromEntries(
-        Object.keys(micronutrients).map(key => [key, ""])
-      ))
+      setMicronutrients(
+        Object.fromEntries(Object.keys(micronutrients).map((key) => [key, ""]))
+      )
       onClose?.()
     } catch (error) {
       console.error("Error submitting food entry:", error)
@@ -146,14 +158,26 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false }
   if (!isOpen && onClose) return null
 
   const content = (
-    <Card
-      className="w-full max-w-md mx-4 bg-gray-900 text-white border-green-500 max-h-[90vh] flex flex-col"
-    >
+    <Card className="w-full max-w-md mx-4 bg-gray-900 text-white border-green-500 max-h-[90vh] flex flex-col">
       <CardContent className="pt-6 overflow-y-auto">
         <h2 className="text-xl font-bold mb-4 text-green-400">
           Macro Calculator – {meal}
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* DATE INPUT */}
+          <div className="space-y-2">
+            <Label htmlFor="date" className="text-green-400">
+              Date
+            </Label>
+            <Input
+              id="date"
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="bg-gray-800 text-white border-green-500"
+            />
+          </div>
+
           {/* FOOD NAME INPUT */}
           <div className="space-y-2">
             <Label htmlFor="foodName" className="text-green-400">
@@ -179,7 +203,9 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false }
                 id="calories"
                 type="number"
                 value={calories}
-                onChange={(e) => setCalories(e.target.value ? Number(e.target.value) : '')}
+                onChange={(e) =>
+                  setCalories(e.target.value ? Number(e.target.value) : '')
+                }
                 disabled={!overrideCalories}
                 className="bg-gray-700 text-white border-green-500"
                 placeholder="Enter calories"
@@ -250,7 +276,9 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false }
             className="mt-2 text-green-400"
             onClick={() => setShowMicronutrients((prev) => !prev)}
           >
-            {showMicronutrients ? "Hide Vitamins & Minerals" : "Add Vitamins & Minerals"}
+            {showMicronutrients
+              ? "Hide Vitamins & Minerals"
+              : "Add Vitamins & Minerals"}
           </Button>
 
           {/* MICRONUTRIENT FIELDS */}
@@ -260,13 +288,16 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false }
                 {Object.entries(micronutrients).map(([nutrient, value]) => (
                   <div key={nutrient} className="space-y-2">
                     <Label htmlFor={nutrient} className="text-green-400">
-                      {nutrient.charAt(0).toUpperCase() + nutrient.slice(1)} {getUnit(nutrient)}
+                      {nutrient.charAt(0).toUpperCase() + nutrient.slice(1)}{" "}
+                      {getUnit(nutrient)}
                     </Label>
                     <Input
                       id={nutrient}
                       type="number"
                       value={value}
-                      onChange={(e) => handleMicronutrientChange(nutrient, e.target.value)}
+                      onChange={(e) =>
+                        handleMicronutrientChange(nutrient, e.target.value)
+                      }
                       className="bg-gray-800 text-white border-green-500"
                       min="0"
                       step="0.1"
@@ -289,7 +320,8 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false }
               type="submit"
               className={cn(
                 "flex-1 bg-green-500 text-white hover:bg-green-600",
-                (!overrideCalories && !carbs && !fats && !protein) && "opacity-50 cursor-not-allowed"
+                (!overrideCalories && !carbs && !fats && !protein) &&
+                  "opacity-50 cursor-not-allowed"
               )}
               disabled={!overrideCalories && (!carbs && !fats && !protein)}
             >
