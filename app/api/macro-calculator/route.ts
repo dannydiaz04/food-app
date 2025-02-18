@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const newRow = {
       date: body.date || new Date().toISOString(),
       meal: body.meal,
-      foodname: body.foodName || "Custom Entry", // Adjust the column names as needed.
+      foodName: body.foodName || "Custom Entry", // Adjust the column names as needed.
       quantity: body.quantity ? Number(body.quantity) : 1,
       unit: body.unit || "serving",
       calories: body.calories,
