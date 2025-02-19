@@ -181,8 +181,8 @@ export function AddFood({ meal }: AddFoodProps) {
                 <div className="flex justify-between items-center">
                   <Button variant="outline">Add Checked</Button>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Sort by:</span>
-                    <select className="text-sm border rounded p-1">
+                    <span className="text-sm text-black-500 text-muted-foreground">Sort by:</span>
+                    <select className="text-sm text-black-500 border rounded p-1">
                       <option>Default</option>
                       <option>Most Recent</option>
                       <option>Most Used</option>
