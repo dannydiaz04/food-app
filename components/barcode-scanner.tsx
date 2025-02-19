@@ -40,14 +40,14 @@ export default function BarcodeScanner({ onDetected, onError }: BarcodeScannerPr
                     target: containerRef.current,
                     constraints: {
                         facingMode: "environment",
-                    },
+                        aspectRatio: { ideal: 1 }
+                    }
                 },
                 decoder: {
                     // List the barcode formats you want to support.
                     // You can add readers such as "code_128_reader", "upc_reader", etc.
-                    readers: ["ean_reader", "code_128_reader", "upc_reader"],
-                },
-                locate: true,
+                    readers: ["ean_reader", "code_128_reader", "upc_reader"]
+                }
             },
             (err: any) => {
                 if (err) {

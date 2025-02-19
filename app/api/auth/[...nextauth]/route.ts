@@ -8,7 +8,7 @@ const supabaseUrl = process.env.SUPABASE_URL as string;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-const authOptions = {
+export const authOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -24,7 +24,7 @@ const authOptions = {
 
           // 2. See if the request is intended to sign up OR sign in.
           //    - You can detect this in various ways, e.g., by checking
-          //      a body parameter like `type: "signup"` or “signin”.
+          //      a body parameter like `type: "signup"` or "signin".
           //    - For demonstration, we'll assume your front-end sends 
           //      a param: credentials?.isSignUp.
           const isSignUp = req.body?.isSignUp; 

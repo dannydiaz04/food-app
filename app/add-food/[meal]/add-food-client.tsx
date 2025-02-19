@@ -19,88 +19,70 @@ interface AddFoodClientProps {
 }
 
 interface FoodProduct {
-  food_ky: string
-  foodName: string
-  calories: number
-  carbs: number
-  fats: number
-  protein: number
-  quantity: number
-  unit: string
+  foodName: string;
+  calories: number;
+  carbs: number;
+  fats: number;
+  protein: number;
+  quantity: number;
+  unit: string;
+  nutriments: any; // Contains macro and micronutrient information from OpenFoodFacts
 }
 
 export function AddFoodClient({ meal }: AddFoodClientProps) {
   const [showScanner, setShowScanner] = useState(false)
-  const [lastScannedCode, setLastScannedCode] = useState<string | null>(null)
   const [scanError, setScanError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
   const [scannedProduct, setScannedProduct] = useState<FoodProduct | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleBarcodeDetected = async (value: string) => {
-    console.log("Barcode detected:", value)
-    setLastScannedCode(value)
-    setShowScanner(false)
-    setScanError(null)
-    setIsLoading(true)
-
+  async function handleBarcodeDetected(barcode: string) {
     try {
-      // First try OpenFoodFacts API
-      const openFoodResponse = await fetch(`https://world.openfoodfacts.org/api/v0/product/${value}.json`)
-      const openFoodData = await openFoodResponse.json()
+      setIsLoading(true)
+
+      // Use the OpenFoodFacts API endpoint to look up the product by barcode.
+      const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`)
       
-      console.log("OpenFoodFacts response:", openFoodData)
-
-      if (openFoodData.status === 1) {
-        const product = openFoodData.product
-        const nutriments = product.nutriments
-
-        // Convert OpenFoodFacts data to our format
-        const foodData = {
-          food_ky: value, // Using barcode as key
-          foodName: product.product_name,
-          calories: nutriments['energy-kcal_100g'] || 0,
-          carbs: nutriments.carbohydrates_100g || 0,
-          fats: nutriments.fat_100g || 0,
-          protein: nutriments.proteins_100g || 0,
-          quantity: 100, // Default to 100g serving
-          unit: 'g',
-          barcode: value
-        }
-
-        console.log("Processed food data:", foodData)
-
-        // Store the food in our database
-        const storeResponse = await fetch('/api/macro-calculator', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ...foodData,
-            meal: meal,
-            date: new Date().toISOString(),
-          }),
-        })
-
-        if (!storeResponse.ok) {
-          throw new Error('Failed to store food data')
-        }
-
-        setScannedProduct(foodData)
-      } else {
-        throw new Error('Product not found in OpenFoodFacts database')
+      if (!response.ok) {
+        throw new Error("Failed to fetch product from OpenFoodFacts")
+      }
+      
+      const data = await response.json()
+      console.log("OpenFoodFacts response:", data)
+      
+      if (data.status !== 1) {
+        throw new Error("Product not found in OpenFoodFacts")
+      }
+      
+      const product = data.product
+      
+      // Map the returned product data into your FoodProduct type.
+      const scannedProductData: FoodProduct = {
+        foodName: product.product_name || "Unnamed product",
+        calories: Math.round(product.nutriments ? (product.nutriments["energy-kcal_100g"] || 0) : 0),
+        carbs: Math.round(product.nutriments ? (product.nutriments["carbohydrates_100g"] || 0) : 0),
+        fats: Math.round(product.nutriments ? (product.nutriments["fat_100g"] || 0) : 0),
+        protein: Math.round(product.nutriments ? (product.nutriments["proteins_100g"] || 0) : 0),
+        quantity: 1,  // Default quantity – adjust as needed
+        unit: "serving",
+        nutriments: product.nutriments  // Include full nutrients information (macros and micros)
       }
 
-    } catch (error) {
+      console.log("Scanned product data from OpenFoodFacts:", scannedProductData)
+
+      // Display the returned data in the UI (or POST it to an API endpoint as needed)
+      setScannedProduct(scannedProductData)
+      setShowScanner(false)
+      setScanError(null)
+    } catch (error: any) {
       console.error("Error processing barcode:", error)
-      setScanError(error instanceof Error ? error.message : 'Failed to look up product')
+      setScanError(error.message)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleScanError = (error: Error) => {
-    console.error("Scan error:", error)
+  function handleScanError(error: Error) {
+    console.error("Barcode scan error:", error)
     setScanError(error.message)
   }
 
@@ -135,11 +117,14 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
         <Alert className="bg-green-500/10 text-green-500 border-green-500/20">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Added to {meal}: {scannedProduct.foodName} 
-            ({scannedProduct.calories} cal, 
-            {scannedProduct.carbs}g carbs, 
-            {scannedProduct.fats}g fats, 
-            {scannedProduct.protein}g protein)
+            Added to {meal}: {scannedProduct.foodName} <br />
+            Calories: {scannedProduct.calories} cal, 
+            Carbs: {scannedProduct.carbs}g, 
+            Fats: {scannedProduct.fats}g, 
+            Protein: {scannedProduct.protein}g <br />
+            <small>
+              Full Nutriments: {JSON.stringify(scannedProduct.nutriments)}
+            </small>
           </AlertDescription>
         </Alert>
       )}

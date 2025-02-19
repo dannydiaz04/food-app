@@ -21,6 +21,14 @@ interface FoodItem {
   protein: number
 }
 
+interface OpenFoodProduct {
+  code: string;
+  product_name: string;
+  nutriments: {
+    [key: string]: number;
+  }
+}
+
 interface AddFoodProps {
   meal: string
 }
@@ -30,6 +38,13 @@ export function AddFood({ meal }: AddFoodProps) {
   const [recentFoods, setRecentFoods] = useState<FoodItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  const [searchResults, setSearchResults] = useState<OpenFoodProduct[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
+  
+  const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null)
+  
   const router = useRouter()
 
   useEffect(() => {
@@ -70,19 +85,116 @@ export function AddFood({ meal }: AddFoodProps) {
     router.push(`/add-food/macro-calculator?meal=${meal.toLowerCase()}`)
   }
 
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!searchQuery.trim()) return;
+
+    setSearchLoading(true)
+    setSearchError(null)
+    try {
+      const response = await fetch(
+        `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(
+          searchQuery
+        )}&search_simple=1&action=process&json=1`
+      )
+      const data = await response.json()
+      
+      // Log the full JSON response from OpenFoodFacts so you can see all properties
+      console.log("OpenFoodFacts full response:", data);
+
+      // Optionally, log each individual product to see its properties
+      if (data && data.products) {
+        data.products.forEach((product: any, index: number) => {
+          console.log(`Product ${index} details:`, product);
+        });
+        setSearchResults(data.products)
+      } else {
+        setSearchResults([])
+      }
+    } catch (err) {
+      console.error("Error searching for foods:", err)
+      setSearchError(err instanceof Error ? err.message : "Unexpected error occurred while searching")
+    } finally {
+      setSearchLoading(false)
+    }
+  }
+
+  const handleAddSearchResult = async (product: OpenFoodProduct) => {
+    const nutriments = product.nutriments || {}
+    const foodData: FoodItem = {
+      food_ky: product.code, // Use barcode as key
+      foodName: product.product_name || "Unknown Food",
+      calories: Math.round(nutriments["energy-kcal_100g"] || 0),
+      carbs: Math.round(nutriments["carbohydrates_100g"] || 0),
+      fats: Math.round(nutriments["fat_100g"] || 0),
+      protein: Math.round(nutriments["proteins_100g"] || 0),
+      quantity: 100, // default serving
+      unit: "g"
+    }
+
+    // Instead of saving immediately, store the foodData for confirmation
+    setSelectedFood(foodData)
+  }
+
+  // New: Function to confirm and save the selected food entry
+  const confirmSave = async () => {
+    if (!selectedFood) return;
+    try {
+      setLoading(true)
+      const response = await fetch('/api/macro-calculator', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...selectedFood,
+          meal,
+          date: new Date().toISOString(),
+        }),
+      })
+      if (!response.ok) {
+        throw new Error('Failed to save food entry')
+      }
+      alert(`Food saved: ${selectedFood.foodName}`)
+      setSelectedFood(null)
+    } catch (err) {
+      console.error("Error saving food entry:", err)
+      alert("Failed to save food entry")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <Card className="w-full">
       <CardHeader className="border-b">
-        <h2 className="text-xl font-bold">Add Food To {meal.charAt(0).toUpperCase() + meal.slice(1)}</h2>
+        <h2 className="text-xl md:text-2xl font-bold">
+          Add Food To {meal.charAt(0).toUpperCase() + meal.slice(1)}
+        </h2>
       </CardHeader>
-      <CardContent className="p-6">
+      <CardContent className="p-4 md:p-6">
         <div className="space-y-6">
+          {/* Confirmation Form for Selected Food */}
+          {selectedFood && (
+            <div className="border p-4 bg-gray-100 mb-4">
+              <h3 className="text-lg font-bold">Confirm Food Entry</h3>
+              <p><strong>Name:</strong> {selectedFood.foodName}</p>
+              <p><strong>Calories:</strong> {selectedFood.calories}</p>
+              <p><strong>Carbs:</strong> {selectedFood.carbs}</p>
+              <p><strong>Fats:</strong> {selectedFood.fats}</p>
+              <p><strong>Protein:</strong> {selectedFood.protein}</p>
+              <div className="mt-2 flex gap-2">
+                <Button onClick={confirmSave}>Confirm</Button>
+                <Button variant="outline" onClick={() => setSelectedFood(null)}>Cancel</Button>
+              </div>
+            </div>
+          )}
           {/* Search Section */}
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-muted-foreground">
-              Search our food database by name
+              Search the food database by name
             </h3>
-            <div className="flex gap-2">
+            <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-2">
               <Input
                 type="text"
                 value={searchQuery}
@@ -91,7 +203,7 @@ export function AddFood({ meal }: AddFoodProps) {
                 className="flex-1"
               />
               <Button type="submit">Search</Button>
-            </div>
+            </form>
             <Link 
               href="#" 
               onClick={handleQuickAddCalories}
@@ -101,11 +213,49 @@ export function AddFood({ meal }: AddFoodProps) {
             </Link>
           </div>
 
+          {searchLoading && (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <span className="ml-2 text-sm text-muted-foreground">Searching...</span>
+            </div>
+          )}
+          {searchError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{searchError}</AlertDescription>
+            </Alert>
+          )}
+          {searchResults.length > 0 && (
+            <div className="space-y-4">
+              <h4 className="text-lg font-semibold">Search Results</h4>
+              <ul>
+                {searchResults.map((product) => (
+                  <li
+                    key={product.code}
+                    className="border p-2 my-2 flex justify-between items-center"
+                  >
+                    <div>
+                      <p className="font-bold">{product.product_name || "Unnamed Product"}</p>
+                      <p className="text-sm">
+                        Calories: {product.nutriments["energy-kcal_100g"] || "N/A"}
+                      </p>
+                    </div>
+                    <Button onClick={() => handleAddSearchResult(product)}>
+                      Add
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Recent Foods Section */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Or, add from your recent foods:</h3>
-              <div className="flex gap-2">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
+              <h3 className="text-lg font-semibold">
+                Or, add from your recent foods:
+              </h3>
+              <div className="flex gap-2 overflow-x-auto whitespace-nowrap">
                 <Button variant="outline" size="sm">
                   Recent
                 </Button>
@@ -138,9 +288,7 @@ export function AddFood({ meal }: AddFoodProps) {
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  {error}
-                </AlertDescription>
+                <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
 
@@ -178,7 +326,7 @@ export function AddFood({ meal }: AddFoodProps) {
                   </Table>
                 </div>
 
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                   <Button variant="outline">Add Checked</Button>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-black-500 text-muted-foreground">Sort by:</span>

@@ -10,13 +10,9 @@ interface PageProps {
   }
 }
 
-async function getMeal(meal: string) {
-  return meal
-}
-
 export default async function AddFoodPage({ params }: PageProps) {
-  const meal = await getMeal(params.meal)
-  
+  const meal = params.meal
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
