@@ -39,15 +39,18 @@ export default function BarcodeScanner({ onDetected, onError }: BarcodeScannerPr
                     type: "LiveStream",
                     target: containerRef.current,
                     constraints: {
-                        facingMode: "environment",
-                        aspectRatio: { ideal: 1 }
-                    }
+                        width: 640,
+                        height: 480,
+                        facingMode: "environment"
+                    },
                 },
                 decoder: {
                     // List the barcode formats you want to support.
                     // You can add readers such as "code_128_reader", "upc_reader", etc.
-                    readers: ["ean_reader", "code_128_reader", "upc_reader"]
-                }
+                    readers: ["ean_reader", "code_128_reader", "upc_reader"],
+                },
+                // Disable locating so that Quagga doesn't try to draw overlay
+                locate: false,
             },
             (err: any) => {
                 if (err) {
@@ -78,12 +81,20 @@ export default function BarcodeScanner({ onDetected, onError }: BarcodeScannerPr
     }
 
     return (
-        <div className="relative w-full aspect-square max-w-[300px] mx-auto">
+        <div className="relative w-full aspect-square max-w-[300px] mx-auto" id="barcode-scanner-container">
             <div ref={containerRef} className="w-full h-full" />
             <div className="absolute inset-0 border-2 border-green-500 pointer-events-none">
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3/4 h-1 bg-green-500/50" />
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1 h-3/4 bg-green-500/50" />
             </div>
+            <style jsx>{`
+                /* Ensure the video inserted by Quagga fills the container */
+                #barcode-scanner-container video {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+            `}</style>
         </div>
     );
 }
