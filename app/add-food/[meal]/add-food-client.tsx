@@ -157,14 +157,17 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
     setScanError(error.message)
   }
 
+  const toggleScanner = () => {
+    setShowScanner(prev => !prev)
+    setScanError(null)
+    setScannedProduct(null)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-end">
         <Button 
-          onClick={() => {
-            setShowScanner(!showScanner)
-            setScanError(null)
-          }}
+          onClick={toggleScanner}
           variant="outline"
           className="flex items-center gap-2"
         >

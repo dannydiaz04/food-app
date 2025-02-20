@@ -27,11 +27,11 @@ interface MealSection {
   }>
 }
 
-interface FoodDiaryProps {
+interface FlavorJournalProps {
   meal: string
 }
 
-export function FoodDiary({ meal }: FoodDiaryProps) {
+export function FlavorJournal({ meal }: FlavorJournalProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null)
   const [macroModalOpen, setMacroModalOpen] = useState(false)
@@ -134,7 +134,7 @@ export function FoodDiary({ meal }: FoodDiaryProps) {
       <Card className="w-full">
         <CardHeader className="border-b">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-lg font-semibold">Your Food Diary For:</div>
+            <div className="text-lg font-semibold">Your Flavor Journal For:</div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="icon" onClick={() => navigateDate(-1)}>
                 <ChevronLeft className="h-4 w-4" />

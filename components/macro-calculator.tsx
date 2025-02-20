@@ -314,7 +314,7 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false }
               onClick={onClose}
               className="flex-1 border-green-500 text-blue-200 hover:bg-green-500 hover:text-white"
             >
-              {isPage ? "Back to Food Diary" : "Cancel"}
+              {isPage ? "Back to Flavor Journal" : "Cancel"}
             </Button>
             <Button
               type="submit"

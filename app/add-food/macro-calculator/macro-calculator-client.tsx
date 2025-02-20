@@ -9,7 +9,7 @@ export default function MacroCalculatorClient() {
   const meal = searchParams.get("meal") || "breakfast"
 
   const handleClose = () => {
-    router.push("/food-diary")
+    router.push("/flavor-journal")
   }
 
   return (

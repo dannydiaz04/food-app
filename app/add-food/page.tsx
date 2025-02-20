@@ -12,7 +12,7 @@ export default function AddFood() {
         <Link href="/">
           <Button variant="ghost" className="mb-4 text-green-400 hover:text-green-300 hover:bg-gray-800">
             <ChevronLeft className="mr-2 h-4 w-4" />
-            Back to Food Diary
+            Back to Flavor Journal
           </Button>
         </Link>
 
@@ -20,7 +20,7 @@ export default function AddFood() {
           {/* Add your card content here */}
           <div className="p-6">
             <h2 className="text-xl font-bold mb-4">Add Food</h2>
-            <p>This is where you can add food items to your diary.</p>
+            <p>This is where you can add food items to your journal.</p>
             {/* Add more components or functionality as needed */}
           </div>
         </Card>

@@ -1,100 +1,86 @@
-"use client";
+import React, { useEffect, useRef } from 'react';
+import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '@zxing/library';
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
-import Quagga from "@ericblade/quagga2"; // Ensure that quagga is installed (or use "quagga2" if preferred)
-
-interface BarcodeScannerProps {
-    onDetected: (barcodeValue: string) => void;
-    onError?: (error: Error) => void;
-}
-
-export default function BarcodeScanner({ onDetected, onError }: BarcodeScannerProps) {
-    const [isScanning, setIsScanning] = useState(true);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const lastDetection = useRef<string | null>(null);
-    const lastDetectionTime = useRef<number>(0);
-
-    const handleDetected = useCallback((result: any) => {
-        if (result && result.codeResult && result.codeResult.code) {
-            const code = result.codeResult.code;
-            const now = Date.now();
-            // Prevent duplicate scans within 2 seconds
-            if (code !== lastDetection.current || now - lastDetectionTime.current > 2000) {
-                console.log("Detected barcode:", code);
-                lastDetection.current = code;
-                lastDetectionTime.current = now;
-                setIsScanning(false);
-                Quagga.stop();
-                onDetected(code);
-            }
-        }
-    }, [onDetected]);
+function BarcodeScanner({ onDetected, onError }) {
+    const videoRef = useRef(null);
+    
+    // Create hints map to enable TRY_HARDER and specify possible formats
+    const hints = new Map();
+    hints.set(DecodeHintType.TRY_HARDER, true);
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+        BarcodeFormat.QR_CODE,
+        BarcodeFormat.DATA_MATRIX,
+        BarcodeFormat.UPC_A,
+        BarcodeFormat.UPC_E,
+        BarcodeFormat.EAN_13,
+        BarcodeFormat.EAN_8,
+        BarcodeFormat.CODE_39,
+        BarcodeFormat.CODE_128,
+        // Add other formats as needed
+    ]);
+    
+    const codeReader = useRef(new BrowserMultiFormatReader(hints));
 
     useEffect(() => {
-        if (!containerRef.current) return;
+        if (!videoRef.current) return;
 
-        Quagga.init(
-            {
-                inputStream: {
-                    type: "LiveStream",
-                    target: containerRef.current,
-                    constraints: {
-                        width: 640,
-                        height: 480,
-                        facingMode: "environment"
-                    },
-                },
-                decoder: {
-                    // List the barcode formats you want to support.
-                    // You can add readers such as "code_128_reader", "upc_reader", etc.
-                    readers: ["ean_reader", "code_128_reader", "upc_reader"],
-                },
-                // Disable locating so that Quagga doesn't try to draw overlay
-                locate: false,
-            },
-            (err: any) => {
-                if (err) {
-                    console.error("Quagga initialization error:", err);
-                    if (onError) {
-                        onError(err instanceof Error ? err : new Error("Initialization error"));
-                    }
-                    return;
+        let mounted = true;
+        const reader = codeReader.current;  // Store ref value
+
+        reader
+            .decodeFromVideoDevice(undefined, videoRef.current, (result, error) => {
+                if (!mounted) return;
+                if (result) {
+                    onDetected(result.getText());
                 }
-                Quagga.start();
-            }
-        );
-
-        Quagga.onDetected(handleDetected);
+                if (error) {
+                    // Only report critical errors, not normal scanning attempts
+                    if (error.name === 'NotAllowedError' || error.name === 'NotFoundError') {
+                        console.log('Stopping due to error:', error.name);
+                        onError(error);
+                    }
+                    // Ignore NotFoundException which occurs during normal scanning
+                    if (!(error.name === 'NotFoundException')) {
+                        onError(error);
+                    }
+                }
+            })
+            .catch((err) => {
+                if (mounted) onError(err);
+            });
 
         return () => {
-            Quagga.offDetected(handleDetected);
-            Quagga.stop();
+            mounted = false;
+            reader.reset();  // Use stored ref value
+            if (videoRef.current?.srcObject) {
+                const stream = videoRef.current.srcObject;
+                stream.getTracks().forEach(track => track.stop());
+            }
         };
-    }, [handleDetected, onError]);
-
-    if (!isScanning) {
-        return (
-            <div className="text-center p-4">
-                <p>Barcode detected! Processing...</p>
-            </div>
-        );
-    }
+    }, [onDetected, onError]);
 
     return (
-        <div className="relative w-full aspect-square max-w-[300px] mx-auto" id="barcode-scanner-container">
-            <div ref={containerRef} className="w-full h-full" />
-            <div className="absolute inset-0 border-2 border-green-500 pointer-events-none">
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3/4 h-1 bg-green-500/50" />
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1 h-3/4 bg-green-500/50" />
+        <div className="relative w-[640px] h-[480px] mx-auto overflow-hidden">
+            <video
+                ref={videoRef}
+                className="w-full h-full object-cover"
+                playsInline
+                muted
+            />
+            {/* Scanning overlay with crosshair */}
+            <div className="absolute inset-0 pointer-events-none">
+                {/* Horizontal line */}
+                <div className="absolute left-1/4 right-1/4 top-1/2 h-[2px] bg-red-500 transform -translate-y-1/2" />
+                {/* Vertical line */}
+                <div className="absolute top-1/4 bottom-1/4 left-1/2 w-[2px] bg-red-500 transform -translate-x-1/2" />
+                {/* Optional: Corner brackets for visual guidance */}
+                <div className="absolute top-1/4 left-1/4 w-[20px] h-[20px] border-l-2 border-t-2 border-red-500" />
+                <div className="absolute top-1/4 right-1/4 w-[20px] h-[20px] border-r-2 border-t-2 border-red-500" />
+                <div className="absolute bottom-1/4 left-1/4 w-[20px] h-[20px] border-l-2 border-b-2 border-red-500" />
+                <div className="absolute bottom-1/4 right-1/4 w-[20px] h-[20px] border-r-2 border-b-2 border-red-500" />
             </div>
-            <style jsx>{`
-                /* Ensure the video inserted by Quagga fills the container */
-                #barcode-scanner-container video {
-                    width: 100%;
-                    height: 100%;
-                    object-fit: cover;
-                }
-            `}</style>
         </div>
     );
 }
+
+export default BarcodeScanner;
