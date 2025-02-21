@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ChevronLeft, ChevronRight, Calendar, Plus, Settings2, Loader2, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Calendar, Plus, Settings2, Loader2, Trash2, Edit2 } from "lucide-react"
 import Link from "next/link"
 import { MacroCalculator } from "@/components/macro-calculator"
 import { useRouter } from "next/navigation"
@@ -56,8 +56,13 @@ interface FoodEntry {
   date: string
 }
 
+interface EditFoodEntry extends FoodEntry {
+  quantity?: number;
+  unit?: string;
+}
+
 export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentDate, setCurrentDate] = useState<Date | null>(null)
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null)
   const [macroModalOpen, setMacroModalOpen] = useState(false)
   const [macroModalMeal, setMacroModalMeal] = useState("")
@@ -67,6 +72,7 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [editEntry, setEditEntry] = useState<EditFoodEntry | null>(null)
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -107,7 +113,11 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
     }
 
     fetchFoodEntries()
-  }, [currentDate])
+  }, [])
+
+  useEffect(() => {
+    setCurrentDate(new Date())
+  }, [])
 
   const dailyGoals = {
     calories: 2033,
@@ -125,7 +135,8 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
     { name: "snacks", items: [] },
   ]
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | null) => {
+    if (!date) return "Loading..."
     return date.toLocaleDateString("en-US", {
       weekday: "long",
       year: "numeric",
@@ -135,6 +146,7 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
   }
 
   const navigateDate = (days: number) => {
+    if (!currentDate) return
     const newDate = new Date(currentDate)
     newDate.setDate(currentDate.getDate() + days)
     setCurrentDate(newDate)
@@ -167,7 +179,7 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
     setDropdownOpen(null); // Close the dropdown first
     setTimeout(() => {
       console.log("In setTimeout, preparing to redirect");
-      const targetUrl = `/add-food/macro-calculator?meal=${mealName.toLowerCase()}&date=${currentDate.toISOString()}`;
+      const targetUrl = `/add-food/macro-calculator?meal=${mealName.toLowerCase()}&date=${currentDate?.toISOString() || ''}`;
       console.log("Redirecting to URL:", targetUrl);
       router.push(targetUrl);
       console.log("router.push called");
@@ -182,8 +194,29 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
     return false;
   };
 
+  // Helper function to format date to YYYY-MM-DD for comparison
+  const formatDateForComparison = (date: Date | null): string => {
+    if (!date) return ''
+    return date.toISOString().split('T')[0]
+  }
+
+  // Helper function to compare dates (only year, month, day)
+  const isSameDay = (dateStr: string, compareDate: Date | null): boolean => {
+    if (!compareDate || !dateStr) return false
+    const date1 = dateStr.split('T')[0] // Get YYYY-MM-DD from ISO string
+    const date2 = formatDateForComparison(compareDate)
+    
+    console.log('Comparing dates (entry.date & then currentDate):', {
+      entryDate: date1,
+      currentDate: date2,
+      isMatch: date1 === date2
+    })
+    
+    return date1 === date2
+  }
+
   const dailyTotals = foodEntries
-    .filter(entry => new Date(entry.date).toDateString() === currentDate.toDateString())
+    .filter(entry => isSameDay(entry.date, currentDate))
     .reduce((acc, entry) => ({
       calories: acc.calories + entry.calories,
       carbs: acc.carbs + entry.carbs,
@@ -244,6 +277,14 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
     }
   }
 
+  const handleEditClick = (entry: FoodEntry) => {
+    setEditEntry(entry)
+  }
+
+  const handleEditClose = () => {
+    setEditEntry(null)
+  }
+
   return (
     <>
       <Card className="w-full">
@@ -268,18 +309,18 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
           <div className="grid gap-6 p-2 sm:p-6">
             {mealSections.map((section) => (
               <div key={section.name} className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <h3 className="text-lg font-semibold">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-muted/50 dark:bg-muted/20 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-foreground/90">
                     {section.name.charAt(0).toUpperCase() + section.name.slice(1)}
                   </h3>
                   <div className="flex gap-2">
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className="text-primary flex-1 sm:flex-none"
+                      className="text-primary flex-1 sm:flex-none hover:bg-primary/10"
                       asChild
                     >
-                      <Link href={`/add-food/${section.name.toLowerCase()}?date=${currentDate.toISOString()}`}>
+                      <Link href={`/add-food/${section.name.toLowerCase()}?date=${currentDate?.toISOString() || ''}`}>
                         <Plus className="h-4 w-4 mr-1" />
                         Add Food
                       </Link>
@@ -324,18 +365,18 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
                     </div>
                   </div>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto rounded-md border bg-card shadow-sm">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[140px] sm:w-[300px]">Food</TableHead>
-                        <TableHead className="text-right">Cal</TableHead>
-                        <TableHead className="text-right">Carbs</TableHead>
-                        <TableHead className="text-right">Fat</TableHead>
-                        <TableHead className="text-right">Protein</TableHead>
-                        <TableHead className="text-right hidden sm:table-cell">Sodium</TableHead>
-                        <TableHead className="text-right hidden sm:table-cell">Sugar</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                      <TableRow className="bg-muted/70 dark:bg-muted/30 hover:bg-muted/70 dark:hover:bg-muted/30">
+                        <TableHead className="w-[140px] sm:w-[300px] font-semibold text-primary">Food</TableHead>
+                        <TableHead className="text-right font-semibold text-primary">Cal</TableHead>
+                        <TableHead className="text-right font-semibold text-primary">Carbs</TableHead>
+                        <TableHead className="text-right font-semibold text-primary">Fat</TableHead>
+                        <TableHead className="text-right font-semibold text-primary">Protein</TableHead>
+                        <TableHead className="text-right hidden sm:table-cell font-semibold text-primary">Sodium</TableHead>
+                        <TableHead className="text-right hidden sm:table-cell font-semibold text-primary">Sugar</TableHead>
+                        <TableHead className="text-right font-semibold text-primary">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -348,10 +389,20 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ) : foodEntries.filter(entry => 
-                          entry.meal.toLowerCase() === section.name.toLowerCase() &&
-                          new Date(entry.date).toDateString() === currentDate.toDateString()
-                        ).length === 0 ? (
+                      ) : foodEntries.filter(entry => {
+                        const isMatchingMeal = entry.meal.toLowerCase() === section.name.toLowerCase()
+                        const isMatchingDate = isSameDay(entry.date, currentDate)
+                        
+                        console.log('Filtering entry:', {
+                          foodName: entry.foodName,
+                          entryDate: entry.date,
+                          currentDate: currentDate?.toISOString(),
+                          isMatchingMeal,
+                          isMatchingDate
+                        })
+                        
+                        return isMatchingMeal && isMatchingDate
+                      }).length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={7} className="text-center text-muted-foreground">
                             No foods added yet
@@ -361,26 +412,39 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
                         foodEntries
                           .filter(entry => 
                             entry.meal.toLowerCase() === section.name.toLowerCase() &&
-                            new Date(entry.date).toDateString() === currentDate.toDateString()
+                            isSameDay(entry.date, currentDate)
                           )
                           .map((entry) => (
-                            <TableRow key={entry.food_ky}>
-                              <TableCell className="w-[140px] sm:w-[300px]">{entry.foodName}</TableCell>
-                              <TableCell className="text-right">{entry.calories?.toString() || '0'}</TableCell>
-                              <TableCell className="text-right">{entry.carbs?.toString() || '0'}</TableCell>
-                              <TableCell className="text-right">{entry.fats?.toString() || '0'}</TableCell>
-                              <TableCell className="text-right">{entry.protein?.toString() || '0'}</TableCell>
-                              <TableCell className="text-right hidden sm:table-cell">{entry.sodium?.toString() || '0'}</TableCell>
-                              <TableCell className="text-right hidden sm:table-cell">{entry.sugar?.toString() || '0'}</TableCell>
+                            <TableRow 
+                              key={entry.food_ky}
+                              className="border-b border-border/50 transition-colors bg-background hover:bg-accent/50 dark:bg-muted/5 dark:hover:bg-accent/20"
+                            >
+                              <TableCell className="w-[140px] sm:w-[300px] font-medium text-foreground/90">{entry.foodName}</TableCell>
+                              <TableCell className="text-right tabular-nums text-foreground/80">{entry.calories?.toString() || '0'}</TableCell>
+                              <TableCell className="text-right tabular-nums text-foreground/80">{entry.carbs?.toString() || '0'}</TableCell>
+                              <TableCell className="text-right tabular-nums text-foreground/80">{entry.fats?.toString() || '0'}</TableCell>
+                              <TableCell className="text-right tabular-nums text-foreground/80">{entry.protein?.toString() || '0'}</TableCell>
+                              <TableCell className="text-right hidden sm:table-cell tabular-nums text-foreground/80">{entry.sodium?.toString() || '0'}</TableCell>
+                              <TableCell className="text-right hidden sm:table-cell tabular-nums text-foreground/80">{entry.sugar?.toString() || '0'}</TableCell>
                               <TableCell className="text-right">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-destructive hover:text-destructive"
-                                  onClick={() => setDeleteEntryId(entry.food_ky)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                                    onClick={() => handleEditClick(entry)}
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                    onClick={() => setDeleteEntryId(entry.food_ky)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))
@@ -394,32 +458,32 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
             <div className="border-t pt-6 overflow-x-auto">
               <Table>
                 <TableBody>
-                  <TableRow>
+                  <TableRow className="border-b border-border/50 bg-muted/40 dark:bg-muted/20">
                     <TableCell className="font-medium">Totals</TableCell>
-                    <TableCell className="text-right">{dailyTotals.calories?.toString() || '0'}</TableCell>
-                    <TableCell className="text-right">{dailyTotals.carbs?.toString() || '0'}</TableCell>
-                    <TableCell className="text-right">{dailyTotals.fat?.toString() || '0'}</TableCell>
-                    <TableCell className="text-right">{dailyTotals.protein?.toString() || '0'}</TableCell>
-                    <TableCell className="text-right hidden sm:table-cell">{dailyTotals.sodium?.toString() || '0'}</TableCell>
-                    <TableCell className="text-right hidden sm:table-cell">{dailyTotals.sugar?.toString() || '0'}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">{dailyTotals.calories?.toString() || '0'}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">{dailyTotals.carbs?.toString() || '0'}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">{dailyTotals.fat?.toString() || '0'}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">{dailyTotals.protein?.toString() || '0'}</TableCell>
+                    <TableCell className="text-right hidden sm:table-cell font-medium tabular-nums">{dailyTotals.sodium?.toString() || '0'}</TableCell>
+                    <TableCell className="text-right hidden sm:table-cell font-medium tabular-nums">{dailyTotals.sugar?.toString() || '0'}</TableCell>
                   </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">Daily Goal</TableCell>
-                    <TableCell className="text-right">{dailyGoals.calories?.toString()}</TableCell>
-                    <TableCell className="text-right">{dailyGoals.carbs?.toString()}</TableCell>
-                    <TableCell className="text-right">{dailyGoals.fat?.toString()}</TableCell>
-                    <TableCell className="text-right">{dailyGoals.protein?.toString()}</TableCell>
-                    <TableCell className="text-right hidden sm:table-cell">{dailyGoals.sodium?.toString()}</TableCell>
-                    <TableCell className="text-right hidden sm:table-cell">{dailyGoals.sugar?.toString()}</TableCell>
+                  <TableRow className="border-b border-border/50 bg-primary/10 dark:bg-primary/20">
+                    <TableCell className="font-medium text-primary">Daily Goal</TableCell>
+                    <TableCell className="text-right font-medium text-primary tabular-nums">{dailyGoals.calories?.toString()}</TableCell>
+                    <TableCell className="text-right font-medium text-primary tabular-nums">{dailyGoals.carbs?.toString()}</TableCell>
+                    <TableCell className="text-right font-medium text-primary tabular-nums">{dailyGoals.fat?.toString()}</TableCell>
+                    <TableCell className="text-right font-medium text-primary tabular-nums">{dailyGoals.protein?.toString()}</TableCell>
+                    <TableCell className="text-right hidden sm:table-cell font-medium text-primary tabular-nums">{dailyGoals.sodium?.toString()}</TableCell>
+                    <TableCell className="text-right hidden sm:table-cell font-medium text-primary tabular-nums">{dailyGoals.sugar?.toString()}</TableCell>
                   </TableRow>
-                  <TableRow>
+                  <TableRow className="bg-muted/60 dark:bg-muted/30">
                     <TableCell className="font-medium">Remaining</TableCell>
-                    <TableCell className="text-right">{remaining.calories?.toString() || '0'}</TableCell>
-                    <TableCell className="text-right">{remaining.carbs?.toString() || '0'}</TableCell>
-                    <TableCell className="text-right">{remaining.fat?.toString() || '0'}</TableCell>
-                    <TableCell className="text-right">{remaining.protein?.toString() || '0'}</TableCell>
-                    <TableCell className="text-right hidden sm:table-cell">{remaining.sodium?.toString() || '0'}</TableCell>
-                    <TableCell className="text-right hidden sm:table-cell">{remaining.sugar?.toString() || '0'}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">{remaining.calories?.toString() || '0'}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">{remaining.carbs?.toString() || '0'}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">{remaining.fat?.toString() || '0'}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">{remaining.protein?.toString() || '0'}</TableCell>
+                    <TableCell className="text-right hidden sm:table-cell font-medium tabular-nums">{remaining.sodium?.toString() || '0'}</TableCell>
+                    <TableCell className="text-right hidden sm:table-cell font-medium tabular-nums">{remaining.sugar?.toString() || '0'}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -433,6 +497,16 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
         isOpen={macroModalOpen}
         onClose={() => setMacroModalOpen(false)}
       />
+
+      {editEntry && (
+        <MacroCalculator
+          meal={editEntry.meal}
+          isOpen={true}
+          onClose={handleEditClose}
+          editMode={true}
+          initialFoodEntry={editEntry}
+        />
+      )}
 
       <AlertDialog open={!!deleteEntryId} onOpenChange={() => {
         setDeleteEntryId(null)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { AddFood } from "@/components/add-food"
 import dynamic from 'next/dynamic'
 import { Button } from "@/components/ui/button"
@@ -68,8 +68,16 @@ interface FoodProduct {
 export function AddFoodClient({ meal }: AddFoodClientProps) {
   const searchParams = useSearchParams()
   const dateParam = searchParams.get('date')
-  const currentDate = dateParam ? new Date(dateParam) : new Date()
+  const [currentDate, setCurrentDate] = useState<Date | null>(null)
   
+  useEffect(() => {
+    if (dateParam) {
+      setCurrentDate(new Date(dateParam))
+    } else {
+      setCurrentDate(new Date())
+    }
+  }, [dateParam])
+
   const [showScanner, setShowScanner] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
   const [scannedProduct, setScannedProduct] = useState<FoodProduct | null>(null)
@@ -169,7 +177,7 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
   }
 
   const confirmSave = async () => {
-    if (!scannedProduct) return;
+    if (!scannedProduct || !currentDate) return;
     try {
       setIsLoading(true)
       const response = await fetch('/api/macro-calculator', {

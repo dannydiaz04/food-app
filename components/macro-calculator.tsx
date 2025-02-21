@@ -7,28 +7,56 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
+interface EditFoodEntry {
+  food_ky: string;
+  userId: string;
+  foodName: string;
+  meal: string;
+  calories: number;
+  carbs: number;
+  fats: number;
+  protein: number;
+  date: string;
+  // Add other optional micronutrient fields
+  [key: string]: any;
+}
+
 interface MacroCalculatorProps {
   meal: string
   isOpen?: boolean
   onClose?: () => void
   isPage?: boolean
   initialDate?: string
+  editMode?: boolean
+  initialFoodEntry?: EditFoodEntry
 }
 
-export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, initialDate }: MacroCalculatorProps) {
+export function MacroCalculator({ 
+  meal, 
+  isOpen = true, 
+  onClose, 
+  isPage = false, 
+  initialDate,
+  editMode = false,
+  initialFoodEntry
+}: MacroCalculatorProps) {
   const [foodName, setFoodName] = useState("Custom Entry")
   const [calories, setCalories] = useState<number | ''>(0)
   const [carbs, setCarbs] = useState("")
   const [fats, setFats] = useState("")
   const [protein, setProtein] = useState("")
 
-  // Initialize the date state with the passed date or current date
-  const [selectedDate, setSelectedDate] = useState(() => {
+  // Initialize selectedDate as null
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+
+  // Set the date client-side only
+  useEffect(() => {
     if (initialDate) {
-      return new Date(initialDate).toISOString().split('T')[0]
+      setSelectedDate(new Date(initialDate).toISOString().split('T')[0])
+    } else {
+      setSelectedDate(new Date().toISOString().split('T')[0])
     }
-    return new Date().toISOString().split('T')[0]
-  })
+  }, [initialDate])
 
   // Toggle to allow manual editing of calories.
   // When false, calories will auto-calculate.
@@ -43,20 +71,20 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, 
     sodium: "",
     sugar: "",
     zinc: "",
-    vitaminA: "",
-    vitaminB: "",
-    vitaminC: "",
-    vitaminD: "",
-    vitaminE: "",
-    vitaminK: "",
-    vitaminB1: "",
-    vitaminB2: "",
-    vitaminB3: "",
-    vitaminB5: "",
-    vitaminB6: "",
-    vitaminB7: "",
-    vitaminB9: "",
-    vitaminB12: "",
+    vitamin_a: "",
+    vitamin_b: "",
+    vitamin_b1: "",
+    vitamin_b2: "",
+    vitamin_b3: "",
+    vitamin_b5: "",
+    vitamin_b6: "",
+    vitamin_b7: "",
+    vitamin_b9: "",
+    vitamin_b12: "",
+    vitamin_c: "",
+    vitamin_d: "",
+    vitamin_e: "",
+    vitamin_k: "",
     calcium: "",
     phosphorus: "",
     magnesium: "",
@@ -73,6 +101,30 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, 
     molybdenum: "",
     chromium: ""
   })
+
+  // Initialize state with edit data if available
+  useEffect(() => {
+    if (editMode && initialFoodEntry) {
+      setFoodName(initialFoodEntry.foodName)
+      setCalories(initialFoodEntry.calories)
+      setCarbs(initialFoodEntry.carbs.toString())
+      setFats(initialFoodEntry.fats.toString())
+      setProtein(initialFoodEntry.protein.toString())
+      setOverrideCalories(true)
+      
+      // Set micronutrients if they exist
+      const micronutrientUpdates = {} as any
+      Object.keys(micronutrients).forEach(key => {
+        if (key in initialFoodEntry) {
+          micronutrientUpdates[key] = initialFoodEntry[key]?.toString() || ""
+        }
+      })
+      setMicronutrients(prev => ({
+        ...prev,
+        ...micronutrientUpdates
+      }))
+    }
+  }, [editMode, initialFoodEntry])
 
   // Update the override calories handler to clear the field when switching to manual
   const handleOverrideCalories = () => {
@@ -105,6 +157,8 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!selectedDate) return
+
     try {
       const micronutrientsData = Object.entries(micronutrients).reduce(
         (acc, [key, value]) => ({
@@ -114,32 +168,38 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, 
         {}
       )
 
-      // Convert the selected date to ISO format
       const entryDate = new Date(selectedDate).toISOString()
+      
+      // Create the request body
+      const requestBody = {
+        meal,
+        foodName: foodName || "Custom Entry",
+        calories: Number(calories || 0),
+        carbs: Number(carbs || 0),
+        fats: Number(fats || 0),
+        protein: Number(protein || 0),
+        ...micronutrientsData,
+        date: entryDate
+      }
 
-      const response = await fetch("/api/macro-calculator", {
-        method: "POST",
+      const endpoint = editMode && initialFoodEntry 
+        ? `/api/food-entries/${initialFoodEntry.food_ky}`
+        : "/api/macro-calculator"
+
+      console.log('Making request to:', endpoint, 'with method:', editMode ? 'PUT' : 'POST')
+      console.log('Request body:', requestBody)
+
+      const response = await fetch(endpoint, {
+        method: editMode ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          meal,
-          foodName: foodName || "Custom Entry",
-          quantity: 1,
-          unit: "serving",
-          calories,
-          // When the macros are optional during manual calorie entry,
-          // empty strings will convert to 0.
-          carbs: Number(carbs || 0),
-          fats: Number(fats || 0),
-          protein: Number(protein || 0),
-          ...micronutrientsData,
-          date: entryDate
-        })
+        body: JSON.stringify(requestBody)
       })
 
       if (!response.ok) {
-        throw new Error("Failed to add food entry")
+        const errorData = await response.json()
+        throw new Error(errorData.error || (editMode ? "Failed to update food entry" : "Failed to add food entry"))
       }
 
       // Reset form and close modal
@@ -154,36 +214,38 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, 
       )
       onClose?.()
     } catch (error) {
-      console.error("Error submitting food entry:", error)
+      console.error(editMode ? "Error updating food entry:" : "Error submitting food entry:", error)
+      // You might want to show an error message to the user here
+      alert(error instanceof Error ? error.message : "An error occurred")
     }
   }
 
   if (!isOpen && onClose) return null
 
   const content = (
-    <Card className="w-full max-w-md mx-4 bg-gray-900 text-white border-green-500 max-h-[90vh] flex flex-col">
+    <Card className="w-full max-w-md mx-4 border-primary max-h-[90vh] flex flex-col">
       <CardContent className="pt-6 overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4 text-green-400">
+        <h2 className="text-xl font-bold mb-4 text-primary">
           Macro Calculator – {meal}
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* DATE INPUT */}
           <div className="space-y-2">
-            <Label htmlFor="date" className="text-green-400">
+            <Label htmlFor="date" className="text-primary">
               Date
             </Label>
             <Input
               id="date"
               type="date"
-              value={selectedDate}
+              value={selectedDate || ''}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="bg-gray-800 text-white border-green-500"
+              className="border-input"
             />
           </div>
 
           {/* FOOD NAME INPUT */}
           <div className="space-y-2">
-            <Label htmlFor="foodName" className="text-green-400">
+            <Label htmlFor="foodName" className="text-primary">
               Food Name
             </Label>
             <Input
@@ -192,13 +254,13 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, 
               value={foodName}
               onChange={(e) => setFoodName(e.target.value)}
               placeholder="Custom Entry"
-              className="bg-gray-800 text-white border-green-500"
+              className="border-input"
             />
           </div>
 
           {/* CALORIES INPUT */}
           <div className="space-y-2">
-            <Label htmlFor="calories" className="text-green-400">
+            <Label htmlFor="calories" className="text-primary">
               Calories {overrideCalories ? "(manual)" : "(auto-calculated)"}
             </Label>
             <div className="flex items-center gap-2">
@@ -210,14 +272,14 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, 
                   setCalories(e.target.value ? Number(e.target.value) : '')
                 }
                 disabled={!overrideCalories}
-                className="bg-gray-700 text-white border-green-500"
+                className="border-input bg-background"
                 placeholder="Enter calories"
               />
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 onClick={handleOverrideCalories}
-                className="text-green-400"
+                className="text-primary hover:text-primary/90"
               >
                 {overrideCalories ? "Auto Calculate" : "Add Calories Manually"}
               </Button>
@@ -226,7 +288,7 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, 
 
           {/* CARBOHYDRATES */}
           <div className="space-y-2">
-            <Label htmlFor="carbs" className="text-green-400">
+            <Label htmlFor="carbs" className="text-primary">
               Carbohydrates (4 kcal/g)
             </Label>
             <Input
@@ -234,7 +296,7 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, 
               type="number"
               value={carbs}
               onChange={(e) => setCarbs(e.target.value)}
-              className="bg-gray-800 text-white border-green-500"
+              className="border-input"
               min="0"
               step="0.1"
             />
@@ -242,7 +304,7 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, 
 
           {/* FATS */}
           <div className="space-y-2">
-            <Label htmlFor="fats" className="text-green-400">
+            <Label htmlFor="fats" className="text-primary">
               Fats (9 kcal/g)
             </Label>
             <Input
@@ -250,7 +312,7 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, 
               type="number"
               value={fats}
               onChange={(e) => setFats(e.target.value)}
-              className="bg-gray-800 text-white border-green-500"
+              className="border-input"
               min="0"
               step="0.1"
             />
@@ -258,7 +320,7 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, 
 
           {/* PROTEIN */}
           <div className="space-y-2">
-            <Label htmlFor="protein" className="text-green-400">
+            <Label htmlFor="protein" className="text-primary">
               Protein (4 kcal/g)
             </Label>
             <Input
@@ -266,7 +328,7 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, 
               type="number"
               value={protein}
               onChange={(e) => setProtein(e.target.value)}
-              className="bg-gray-800 text-white border-green-500"
+              className="border-input"
               min="0"
               step="0.1"
             />
@@ -275,8 +337,8 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, 
           {/* TOGGLE MICRONUTRIENTS BUTTON */}
           <Button
             type="button"
-            variant="ghost"
-            className="mt-2 text-green-400"
+            variant="outline"
+            className="mt-2 text-primary hover:text-primary/90"
             onClick={() => setShowMicronutrients((prev) => !prev)}
           >
             {showMicronutrients
@@ -290,7 +352,7 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {Object.entries(micronutrients).map(([nutrient, value]) => (
                   <div key={nutrient} className="space-y-2">
-                    <Label htmlFor={nutrient} className="text-green-400">
+                    <Label htmlFor={nutrient} className="text-primary">
                       {nutrient.charAt(0).toUpperCase() + nutrient.slice(1)}{" "}
                       {getUnit(nutrient)}
                     </Label>
@@ -301,7 +363,7 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, 
                       onChange={(e) =>
                         handleMicronutrientChange(nutrient, e.target.value)
                       }
-                      className="bg-gray-800 text-white border-green-500"
+                      className="border-input"
                       min="0"
                       step="0.1"
                     />
@@ -315,14 +377,15 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, 
             <Button
               type="button"
               onClick={onClose}
-              className="flex-1 border-green-500 text-blue-200 hover:bg-green-500 hover:text-white"
+              variant="outline"
+              className="flex-1"
             >
               {isPage ? "Back to Flavor Journal" : "Cancel"}
             </Button>
             <Button
               type="submit"
               className={cn(
-                "flex-1 bg-green-500 text-white hover:bg-green-600",
+                "flex-1",
                 (!overrideCalories && !carbs && !fats && !protein) &&
                   "opacity-50 cursor-not-allowed"
               )}
@@ -345,13 +408,9 @@ export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, 
     )
   }
 
-  // For modal rendering, wrap in the backdrop div but remove the onClick handler
+  // For modal rendering, wrap in the backdrop div
   return (
-    <div
-      className={cn(
-        "fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-      )}
-    >
+    <div className={cn("fixed inset-0 bg-background/80 flex items-center justify-center z-50")}>
       {content}
     </div>
   )
@@ -363,19 +422,20 @@ function getUnit(nutrient: string): string {
     sodium: "(mg)",
     sugar: "(g)",
     zinc: "(mg)",
-    vitaminA: "(IU)",
-    vitaminC: "(mg)",
-    vitaminD: "(IU)",
-    vitaminE: "(mg)",
-    vitaminK: "(mcg)",
-    vitaminB1: "(mg)",
-    vitaminB2: "(mg)",
-    vitaminB3: "(mg)",
-    vitaminB5: "(mg)",
-    vitaminB6: "(mg)",
-    vitaminB7: "(mcg)",
-    vitaminB9: "(mcg)",
-    vitaminB12: "(mcg)",
+    vitamin_a: "(IU)",
+    vitamin_b: "(IU)",
+    vitamin_b1: "(mg)",
+    vitamin_b2: "(mg)",
+    vitamin_b3: "(mg)",
+    vitamin_b5: "(mg)",
+    vitamin_b6: "(mg)",
+    vitamin_b7: "(mcg)",
+    vitamin_b9: "(mcg)",
+    vitamin_b12: "(mcg)",
+    vitamin_c: "(mg)",
+    vitamin_d: "(IU)",
+    vitamin_e: "(mg)",
+    vitamin_k: "(mcg)",
     calcium: "(mg)",
     phosphorus: "(mg)",
     magnesium: "(mg)",
