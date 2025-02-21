@@ -53,10 +53,10 @@ export async function POST(request: NextRequest) {
       foodName: body.foodName || "Custom Entry",
       quantity: body.quantity ? Number(body.quantity) : 1,
       unit: body.unit || "serving",
-      calories: body.calories || autoCalculatedCalories,
-      carbs: body.carbs,
-      fats: body.fats,
-      protein: body.protein,
+      calories: Math.round(body.calories || autoCalculatedCalories),
+      carbs: Math.round(body.carbs),
+      fats: Math.round(body.fats),
+      protein: Math.round(body.protein),
       // Assumes that the keys in body.micronutrients match your DB column names.
       ...body.micronutrients,
     };

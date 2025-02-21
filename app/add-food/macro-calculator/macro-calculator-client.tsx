@@ -7,6 +7,7 @@ export default function MacroCalculatorClient() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const meal = searchParams.get("meal") || "breakfast"
+  const date = searchParams.get("date")
 
   const handleClose = () => {
     router.push("/flavor-journal")
@@ -18,6 +19,7 @@ export default function MacroCalculatorClient() {
       isOpen={true} 
       onClose={handleClose}
       isPage={true}
+      initialDate={date || undefined}
     />
   )
 } 

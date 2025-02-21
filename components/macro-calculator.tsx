@@ -12,19 +12,22 @@ interface MacroCalculatorProps {
   isOpen?: boolean
   onClose?: () => void
   isPage?: boolean
+  initialDate?: string
 }
 
-export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false }: MacroCalculatorProps) {
+export function MacroCalculator({ meal, isOpen = true, onClose, isPage = false, initialDate }: MacroCalculatorProps) {
   const [foodName, setFoodName] = useState("Custom Entry")
   const [calories, setCalories] = useState<number | ''>(0)
   const [carbs, setCarbs] = useState("")
   const [fats, setFats] = useState("")
   const [protein, setProtein] = useState("")
 
-  // New: Date state
+  // Initialize the date state with the passed date or current date
   const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split("T")[0]; // format: YYYY-MM-DD
+    if (initialDate) {
+      return new Date(initialDate).toISOString().split('T')[0]
+    }
+    return new Date().toISOString().split('T')[0]
   })
 
   // Toggle to allow manual editing of calories.

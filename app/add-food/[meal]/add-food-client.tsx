@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Scan } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Loader2 } from "lucide-react"
+import { useSearchParams } from 'next/navigation'
 
 // Dynamically import BarcodeScanner with no SSR
 const BarcodeScanner = dynamic(
@@ -65,6 +66,10 @@ interface FoodProduct {
 }
 
 export function AddFoodClient({ meal }: AddFoodClientProps) {
+  const searchParams = useSearchParams()
+  const dateParam = searchParams.get('date')
+  const currentDate = dateParam ? new Date(dateParam) : new Date()
+  
   const [showScanner, setShowScanner] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
   const [scannedProduct, setScannedProduct] = useState<FoodProduct | null>(null)
@@ -161,6 +166,30 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
     setShowScanner(prev => !prev)
     setScanError(null)
     setScannedProduct(null)
+  }
+
+  const confirmSave = async () => {
+    if (!scannedProduct) return;
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/macro-calculator', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...scannedProduct,
+          meal,
+          date: currentDate.toISOString(),
+        }),
+      })
+      // ... rest of the save logic ...
+    } catch (err) {
+      console.error("Error saving food entry:", err)
+      alert("Failed to save food entry")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
