@@ -60,24 +60,25 @@ function BarcodeScanner({ onDetected, onError }) {
     }, [onDetected, onError]);
 
     return (
-        <div className="relative w-[640px] h-[480px] mx-auto overflow-hidden">
+        <div className="relative w-full max-w-[640px] aspect-[4/3] mx-auto overflow-hidden">
             <video
                 ref={videoRef}
-                className="w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover"
                 playsInline
                 muted
+                autoPlay
             />
-            {/* Scanning overlay with crosshair */}
+            {/* Scanning overlay with crosshair - made more visible on mobile */}
             <div className="absolute inset-0 pointer-events-none">
-                {/* Horizontal line */}
-                <div className="absolute left-1/4 right-1/4 top-1/2 h-[2px] bg-red-500 transform -translate-y-1/2" />
-                {/* Vertical line */}
-                <div className="absolute top-1/4 bottom-1/4 left-1/2 w-[2px] bg-red-500 transform -translate-x-1/2" />
-                {/* Optional: Corner brackets for visual guidance */}
-                <div className="absolute top-1/4 left-1/4 w-[20px] h-[20px] border-l-2 border-t-2 border-red-500" />
-                <div className="absolute top-1/4 right-1/4 w-[20px] h-[20px] border-r-2 border-t-2 border-red-500" />
-                <div className="absolute bottom-1/4 left-1/4 w-[20px] h-[20px] border-l-2 border-b-2 border-red-500" />
-                <div className="absolute bottom-1/4 right-1/4 w-[20px] h-[20px] border-r-2 border-b-2 border-red-500" />
+                {/* Horizontal line - thicker for mobile */}
+                <div className="absolute left-[15%] right-[15%] top-1/2 h-[3px] bg-red-500/70 transform -translate-y-1/2" />
+                {/* Vertical line - thicker for mobile */}
+                <div className="absolute top-[15%] bottom-[15%] left-1/2 w-[3px] bg-red-500/70 transform -translate-x-1/2" />
+                {/* Corner brackets - larger for mobile */}
+                <div className="absolute top-[15%] left-[15%] w-[30px] h-[30px] border-l-[3px] border-t-[3px] border-red-500/70" />
+                <div className="absolute top-[15%] right-[15%] w-[30px] h-[30px] border-r-[3px] border-t-[3px] border-red-500/70" />
+                <div className="absolute bottom-[15%] left-[15%] w-[30px] h-[30px] border-l-[3px] border-b-[3px] border-red-500/70" />
+                <div className="absolute bottom-[15%] right-[15%] w-[30px] h-[30px] border-r-[3px] border-b-[3px] border-red-500/70" />
             </div>
         </div>
     );
