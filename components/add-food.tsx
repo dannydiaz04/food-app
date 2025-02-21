@@ -9,6 +9,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Label } from "@/components/ui/label"
 
 interface FoodItem {
   food_ky: string
@@ -16,6 +17,7 @@ interface FoodItem {
   brands: string
   unit: string
   serving_size: string
+  serving_size_g?: number
   calories: number
   carbs: number
   fats: number
@@ -127,20 +129,100 @@ export function AddFood({ meal }: AddFoodProps) {
 
   const handleAddSearchResult = (product: OpenFoodProduct) => {
     const nutriments = product.nutriments || {}
+    const servingSizeG = parseFloat(product.serving_size || '0') || 100 // Default to 100g if not provided
+    
+    // Calculate per 100g values first
+    const per100g = {
+      calories: Math.round(nutriments["energy-kcal_100g"] || 0),
+      carbs: Math.round(nutriments["carbohydrates_100g"] || 0),
+      fats: Math.round(nutriments["fat_100g"] || 0),
+      protein: Math.round(nutriments["proteins_100g"] || 0),
+    }
+
+    // Calculate per serving values
+    const perServing = {
+      calories: Math.round((per100g.calories * servingSizeG) / 100),
+      carbs: Math.round((per100g.carbs * servingSizeG) / 100),
+      fats: Math.round((per100g.fats * servingSizeG) / 100),
+      protein: Math.round((per100g.protein * servingSizeG) / 100),
+    }
+
     const foodData: FoodItem = {
       food_ky: product.code,
       foodName: product.product_name || "Unknown Food",
       brands: product.brands || "Unknown Brand",
       unit: product.serving_quantity_unit || "g",
-      calories: Math.round(nutriments["energy-kcal_100g"] || 0),
-      carbs: Math.round(nutriments["carbohydrates_100g"] || 0),
-      fats: Math.round(nutriments["fat_100g"] || 0),
-      protein: Math.round(nutriments["proteins_100g"] || 0),
-      serving_size: product.serving_size || "g",
+      serving_size: product.serving_size || "100",
+      serving_size_g: servingSizeG,
+      calories: perServing.calories,
+      carbs: perServing.carbs,
+      fats: perServing.fats,
+      protein: perServing.protein,
     }
 
     setSelectedFood(foodData)
     setExpandedItemId(product.code)
+  }
+
+  // Add new function to handle unit/serving size changes
+  const updateNutritionalValues = (
+    food: FoodItem,
+    newUnit: string,
+    newServingSize: string
+  ) => {
+    const newServingSizeNum = parseFloat(newServingSize)
+    if (!newServingSizeNum || newServingSizeNum <= 0) return food
+
+    // If switching to grams, calculate per-gram values
+    if (newUnit === 'g') {
+      const originalServingG = food.serving_size_g || parseFloat(food.serving_size)
+      const perGram = {
+        calories: food.calories / originalServingG,
+        carbs: food.carbs / originalServingG,
+        fats: food.fats / originalServingG,
+        protein: food.protein / originalServingG,
+      }
+
+      return {
+        ...food,
+        unit: newUnit,
+        serving_size: newServingSize,
+        calories: Math.round(perGram.calories * newServingSizeNum),
+        carbs: Math.round(perGram.carbs * newServingSizeNum),
+        fats: Math.round(perGram.fats * newServingSizeNum),
+        protein: Math.round(perGram.protein * newServingSizeNum),
+      }
+    }
+
+    // For other units, maintain the ratio with original serving size
+    const ratio = newServingSizeNum / parseFloat(food.serving_size)
+    return {
+      ...food,
+      unit: newUnit,
+      serving_size: newServingSize,
+      calories: Math.round(food.calories * ratio),
+      carbs: Math.round(food.carbs * ratio),
+      fats: Math.round(food.fats * ratio),
+      protein: Math.round(food.protein * ratio),
+    }
+  }
+
+  // Add these to the expanded confirmation section
+  const handleUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (!selectedFood) return
+    const newFood = updateNutritionalValues(selectedFood, e.target.value, selectedFood.serving_size)
+    setSelectedFood(newFood)
+  }
+
+  const handleServingSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedFood) return;
+    
+    const value = e.target.value;
+    // Allow empty string or valid numbers
+    setSelectedFood({
+      ...selectedFood,
+      serving_size: value
+    });
   }
 
   // New: Function to confirm and save the selected food entry
@@ -246,13 +328,35 @@ export function AddFood({ meal }: AddFoodProps) {
                       <div className="p-4 bg-muted/50 border-t">
                         <div className="space-y-2">
                           <h3 className="font-semibold">Confirm Food Entry</h3>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            <p><strong>Brand:</strong> {selectedFood.brands}</p>
-                            <p><strong>Calories:</strong> {selectedFood.calories}</p>
-                            <p><strong>Carbs:</strong> {selectedFood.carbs}g</p>
-                            <p><strong>Fats:</strong> {selectedFood.fats}g</p>
-                            <p><strong>Protein:</strong> {selectedFood.protein}g</p>
-                            <p><strong>Serving Size:</strong> {selectedFood.serving_size}</p>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Serving Size</Label>
+                              <Input
+                                type="number"
+                                value={selectedFood.serving_size}
+                                onChange={handleServingSizeChange}
+                                placeholder="0"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Unit</Label>
+                              <select
+                                className="w-full p-2 border rounded-md"
+                                value={selectedFood.unit}
+                                onChange={handleUnitChange}
+                              >
+                                <option value="g">grams (g)</option>
+                                <option value="serving">serving</option>
+                                <option value="oz">ounces (oz)</option>
+                              </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <p><strong>Brand:</strong> {selectedFood.brands}</p>
+                              <p><strong>Calories:</strong> {selectedFood.calories}</p>
+                              <p><strong>Carbs:</strong> {selectedFood.carbs}g</p>
+                              <p><strong>Fats:</strong> {selectedFood.fats}g</p>
+                              <p><strong>Protein:</strong> {selectedFood.protein}g</p>
+                            </div>
                           </div>
                           <div className="flex gap-2 mt-4">
                             <Button 
@@ -354,7 +458,7 @@ export function AddFood({ meal }: AddFoodProps) {
                           <TableCell className="text-right">{food.carbs}</TableCell>
                           <TableCell className="text-right">{food.fats}</TableCell>
                           <TableCell className="text-right">{food.protein}</TableCell>
-                          <TableCell>{food.quantity} {food.unit}</TableCell>
+                          <TableCell>{food.serving_size} {food.unit}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

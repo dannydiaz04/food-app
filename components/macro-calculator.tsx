@@ -41,10 +41,10 @@ export function MacroCalculator({
   initialFoodEntry
 }: MacroCalculatorProps) {
   const [foodName, setFoodName] = useState("Custom Entry")
-  const [calories, setCalories] = useState<number | ''>(0)
-  const [carbs, setCarbs] = useState("")
-  const [fats, setFats] = useState("")
-  const [protein, setProtein] = useState("")
+  const [calories, setCalories] = useState<number | ''>('')
+  const [carbs, setCarbs] = useState<string>('')
+  const [fats, setFats] = useState<string>('')
+  const [protein, setProtein] = useState<string>('')
 
   // Initialize selectedDate as null
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
@@ -66,7 +66,7 @@ export function MacroCalculator({
   const [showMicronutrients, setShowMicronutrients] = useState(false)
 
   // Additional micronutrient state variables
-  const [micronutrients, setMicronutrients] = useState({
+  const [micronutrients, setMicronutrients] = useState<Record<string, string>>({
     fiber: "",
     sodium: "",
     sugar: "",
@@ -139,12 +139,12 @@ export function MacroCalculator({
   // Calculate calories from macros when not overidden
   useEffect(() => {
     if (!overrideCalories) {
-      const carbsCal = Number.parseFloat(carbs || "0") * 4
-      const proteinCal = Number.parseFloat(protein || "0") * 4
-      const fatsCal = Number.parseFloat(fats || "0") * 9
+      const carbsCal = Number(carbs || 0) * 4
+      const proteinCal = Number(protein || 0) * 4
+      const fatsCal = Number(fats || 0) * 9
 
       const total = carbsCal + proteinCal + fatsCal
-      setCalories(Math.round(total))
+      setCalories(total > 0 ? Math.round(total) : '')
     }
   }, [carbs, protein, fats, overrideCalories])
 
@@ -155,6 +155,13 @@ export function MacroCalculator({
     }))
   }
 
+  const handleNumberInput = (setter: (value: string) => void) => (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = e.target.value;
+    setter(value);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedDate) return
@@ -163,14 +170,11 @@ export function MacroCalculator({
       const micronutrientsData = Object.entries(micronutrients).reduce(
         (acc, [key, value]) => ({
           ...acc,
-          [key]: value ? Number(value) : null
+          [key]: value ? Number(value) : 0
         }),
         {}
       )
 
-      const entryDate = new Date(selectedDate).toISOString()
-      
-      // Create the request body
       const requestBody = {
         meal,
         foodName: foodName || "Custom Entry",
@@ -179,7 +183,7 @@ export function MacroCalculator({
         fats: Number(fats || 0),
         protein: Number(protein || 0),
         ...micronutrientsData,
-        date: entryDate
+        date: new Date(selectedDate).toISOString()
       }
 
       const endpoint = editMode && initialFoodEntry 
@@ -207,7 +211,7 @@ export function MacroCalculator({
       setCarbs("")
       setFats("")
       setProtein("")
-      setCalories(0)
+      setCalories('')
       setOverrideCalories(false)
       setMicronutrients(
         Object.fromEntries(Object.keys(micronutrients).map((key) => [key, ""]))
@@ -268,9 +272,7 @@ export function MacroCalculator({
                 id="calories"
                 type="number"
                 value={calories}
-                onChange={(e) =>
-                  setCalories(e.target.value ? Number(e.target.value) : '')
-                }
+                onChange={(e) => setCalories(e.target.value ? Number(e.target.value) : '')}
                 disabled={!overrideCalories}
                 className="border-input bg-background"
                 placeholder="Enter calories"
@@ -295,10 +297,9 @@ export function MacroCalculator({
               id="carbs"
               type="number"
               value={carbs}
-              onChange={(e) => setCarbs(e.target.value)}
+              onChange={handleNumberInput(setCarbs)}
               className="border-input"
-              min="0"
-              step="0.1"
+              placeholder="0"
             />
           </div>
 
@@ -311,10 +312,9 @@ export function MacroCalculator({
               id="fats"
               type="number"
               value={fats}
-              onChange={(e) => setFats(e.target.value)}
+              onChange={handleNumberInput(setFats)}
               className="border-input"
-              min="0"
-              step="0.1"
+              placeholder="0"
             />
           </div>
 
@@ -327,10 +327,9 @@ export function MacroCalculator({
               id="protein"
               type="number"
               value={protein}
-              onChange={(e) => setProtein(e.target.value)}
+              onChange={handleNumberInput(setProtein)}
               className="border-input"
-              min="0"
-              step="0.1"
+              placeholder="0"
             />
           </div>
 

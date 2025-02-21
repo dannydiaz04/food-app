@@ -58,4 +58,29 @@ const config: Config = {
   plugins: [require("tailwindcss-animate")],
 }
 
-export default config;
+// Add base styles to remove number input spinners
+const customConfig = {
+  ...config,
+  theme: {
+    ...config.theme,
+    extend: {
+      ...config.theme?.extend,
+    }
+  },
+  plugins: [
+    ...config.plugins || [],
+    function({ addBase }) {
+      addBase({
+        'input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button': {
+          '-webkit-appearance': 'none',
+          margin: '0',
+        },
+        'input[type="number"]': {
+          '-moz-appearance': 'textfield',
+        },
+      });
+    },
+  ],
+};
+
+export default customConfig;

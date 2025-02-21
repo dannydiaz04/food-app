@@ -21,45 +21,45 @@ interface AddFoodClientProps {
 
 interface FoodProduct {
   foodName: string;
-  calories: number;
-  carbs: number;
-  fats: number;
-  protein: number;
+  calories: number | '';
+  carbs: number | '';
+  fats: number | '';
+  protein: number | '';
   serving_quantity: string;
   serving_quantity_unit: string;
-  fiber: number;
-  sodium: number;
-  sugar: number;
-  zinc: number;
-  calcium: number;
-  iron: number;
-  phosphorus: number;
-  magnesium: number;
-  potassium: number;
-  chloride: number;
-  sulfur: number;
-  manganese: number;
-  copper: number;
-  iodine: number;
-  cobalt: number;
-  fluoride: number;
-  selenium: number;
-  molybdenum: number;
-  chromium: number;
-  vitamin_a: number;
-  vitamin_b: number;
-  vitamin_b1: number;
-  vitamin_b2: number;
-  vitamin_b3: number;
-  vitamin_b5: number;
-  vitamin_b6: number;
-  vitamin_b7: number;
-  vitamin_b9: number;
-  vitamin_b12: number;
-  vitamin_c: number;
-  vitamin_d: number;
-  vitamin_e: number;
-  vitamin_k: number;
+  fiber: number | '';
+  sodium: number | '';
+  sugar: number | '';
+  zinc: number | '';
+  calcium: number | '';
+  iron: number | '';
+  phosphorus: number | '';
+  magnesium: number | '';
+  potassium: number | '';
+  chloride: number | '';
+  sulfur: number | '';
+  manganese: number | '';
+  copper: number | '';
+  iodine: number | '';
+  cobalt: number | '';
+  fluoride: number | '';
+  selenium: number | '';
+  molybdenum: number | '';
+  chromium: number | '';
+  vitamin_a: number | '';
+  vitamin_b: number | '';
+  vitamin_b1: number | '';
+  vitamin_b2: number | '';
+  vitamin_b3: number | '';
+  vitamin_b5: number | '';
+  vitamin_b6: number | '';
+  vitamin_b7: number | '';
+  vitamin_b9: number | '';
+  vitamin_b12: number | '';
+  vitamin_c: number | '';
+  vitamin_d: number | '';
+  vitamin_e: number | '';
+  vitamin_k: number | '';
   
   // for debugging
 //   nutriments: any; // Contains macro and micronutrient information from OpenFoodFacts
@@ -87,7 +87,6 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
     try {
       setIsLoading(true)
 
-      // Use the OpenFoodFacts API endpoint to look up the product by barcode.
       const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`)
       
       if (!response.ok) {
@@ -102,64 +101,66 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
       }
       
       const product = data.product
+      const nutriments = product.nutriments || {}
       
-      // Map the returned product data into your FoodProduct type.
+      // Helper function to convert nutriment value
+      const getNutrimentValue = (key: string): number | '' => {
+        const value = nutriments[key]
+        return value ? Math.round(value) : ''
+      }
+
+      // Map the returned product data into your FoodProduct type
       const scannedProductData: FoodProduct = {
         foodName: product.product_name || "Unnamed product",
-        calories: Math.round(product.nutriments ? (product.nutriments["energy-kcal"] || 0) : 0),
-        carbs: Math.round(product.nutriments ? (product.nutriments["carbohydrates"] || 0) : 0),
-        fats: Math.round(product.nutriments ? (product.nutriments["fat"] || 0) : 0),
-        protein: Math.round(product.nutriments ? (product.nutriments["proteins"] || 0) : 0),
-        serving_quantity: product.serving_quantity,  // Default quantity – adjust as needed
-        serving_quantity_unit: product.serving_quantity_unit,
-        fiber: Math.round(product.nutriments ? (product.nutriments["fiber"] || 0) : 0),
-        sodium: (product.nutriments ? (product.nutriments["sodium"] || 0) : 0) * 1000, // sodium is in mg
-        sugar: product.nutriments ? (product.nutriments["sugars"] || 0) : 0, // sugar is in grams
-        zinc: (product.nutriments_estimated ? (product.nutriments_estimated["zinc_100g"] || 0) : 0) * 100000, // zinc is in mg
-        calcium: (product.nutriments ? (product.nutriments["calcium"] || 0) : 0) * 1000, // calcium is in mg
-        phosphorus: (product.nutriments_estimated ? (product.nutriments_estimated["phosphorus_100g"] || 0) : 0) * 100, // phosphorus is in g
-        magnesium: (product.nutriments_estimated ? (product.nutriments_estimated["magnesium_100g"] || 0) : 0) * 100, // magnesium is in g
-        iron: (product.nutriments ? (product.nutriments["iron"] || 0) : 0) * 1000, // iron is in mg
-        potassium: (product.nutriments ? (product.nutriments["potassium"] || 0) : 0) * 1000, // potassium is in mg
-        chloride: (product.nutriments ? (product.nutriments["chloride"] || 0) : 0) * 1000, // chloride is in mg
-        sulfur: (product.nutriments ? (product.nutriments["sulfur"] || 0) : 0) * 1000, // sulfur is in mg
-        manganese: (product.nutriments_estimated ? (product.nutriments_estimated["manganese_100g"] || 0) : 0) * 100, // manganese is in g
-        copper: (product.nutriments_estimated ? (product.nutriments_estimated["copper_100g"] || 0) : 0) * 100, // copper is in g
-        iodine: (product.nutriments_estimated ? (product.nutriments_estimated["iodine_100g"] || 0) : 0) * 100, // iodine is in g
-        cobalt: (product.nutriments_estimated ? (product.nutriments_estimated["cobalt_100g"] || 0) : 0) * 100, // cobalt is in g
-        fluoride: (product.nutriments_estimated ? (product.nutriments_estimated["fluoride_100g"] || 0) : 0) * 100, // fluoride is in g
-        selenium: (product.nutriments_estimated ? (product.nutriments_estimated["selenium_100g"] || 0) : 0) * 100, // selenium is in g
-        molybdenum: (product.nutriments_estimated ? (product.nutriments_estimated["molybdenum_100g"] || 0) : 0) * 100, // molybdenum is in g
-        chromium: (product.nutriments_estimated ? (product.nutriments_estimated["chromium_100g"] || 0) : 0) * 100, // chromium is in g
-        vitamin_a: (product.nutriments ? (product.nutriments["vitamin-a"] || 0) : 0) * 100, // vitamin a is in g
-        vitamin_b: (product.nutriments ? (product.nutriments["vitamin-b"] || 0) : 0) * 100, // vitamin b is in g
-        vitamin_b1: (product.nutriments_estimated ? (product.nutriments_estimated["vitamin-b1_100g"] || 0) : 0) * 100, // vitamin b1 is in g
-        vitamin_b2: (product.nutriments_estimated ? (product.nutriments_estimated["vitamin-b2_100g"] || 0) : 0) * 100, // vitamin b2 is in g
-        vitamin_b3: (product.nutriments_estimated ? (product.nutriments_estimated["vitamin-b3_100g"] || 0) : 0) * 100, // vitamin b3 is in g
-        vitamin_b5: (product.nutriments_estimated ? (product.nutriments_estimated["vitamin-b5_100g"] || 0) : 0) * 100, // vitamin b5 is in g
-        vitamin_b6: (product.nutriments_estimated ? (product.nutriments_estimated["vitamin-b6_100g"] || 0) : 0) * 100, // vitamin b6 is in g
-        vitamin_b7: (product.nutriments_estimated ? (product.nutriments_estimated["vitamin-b7_100g"] || 0) : 0) * 100, // vitamin b7 is in g
-        vitamin_b9: (product.nutriments_estimated ? (product.nutriments_estimated["vitamin-b9_100g"] || 0) : 0) * 100, // vitamin b9 is in g
-        vitamin_b12: (product.nutriments_estimated ? (product.nutriments_estimated["vitamin-b12_100g"] || 0) : 0) * 100, // vitamin b12 is in g
-        vitamin_c: (product.nutriments_estimated ? (product.nutriments_estimated["vitamin-c_100g"] || 0) : 0) * 100, // vitamin c is in g
-        vitamin_d: (product.nutriments_estimated ? (product.nutriments_estimated["vitamin-d_100g"] || 0) : 0) * 100, // vitamin d is in g
-        vitamin_e: (product.nutriments_estimated ? (product.nutriments_estimated["vitamin-e_100g"] || 0) : 0) * 100, // vitamin e is in g
-        vitamin_k: (product.nutriments_estimated ? (product.nutriments_estimated["vitamin-k_100g"] || 0) : 0) * 100, // vitamin k is in g
-
-
-        // for debugging
-        // nutriments: product.nutriments  // Include full nutrients information (macros and micros)
+        calories: getNutrimentValue("energy-kcal"),
+        carbs: getNutrimentValue("carbohydrates"),
+        fats: getNutrimentValue("fat"),
+        protein: getNutrimentValue("proteins"),
+        serving_quantity: product.serving_quantity || "",
+        serving_quantity_unit: product.serving_quantity_unit || "",
+        fiber: getNutrimentValue("fiber"),
+        sodium: nutriments["sodium"] ? Math.round(nutriments["sodium"] * 1000) : '',
+        sugar: getNutrimentValue("sugars"),
+        zinc: nutriments["zinc"] ? Math.round(nutriments["zinc"] * 100000) : '',
+        calcium: nutriments["calcium"] ? Math.round(nutriments["calcium"] * 1000) : '',
+        iron: nutriments["iron"] ? Math.round(nutriments["iron"] * 1000) : '',
+        phosphorus: nutriments["phosphorus"] ? Math.round(nutriments["phosphorus"] * 100) : '',
+        magnesium: nutriments["magnesium"] ? Math.round(nutriments["magnesium"] * 100) : '',
+        potassium: nutriments["potassium"] ? Math.round(nutriments["potassium"] * 1000) : '',
+        chloride: nutriments["chloride"] ? Math.round(nutriments["chloride"] * 1000) : '',
+        sulfur: nutriments["sulfur"] ? Math.round(nutriments["sulfur"] * 1000) : '',
+        manganese: nutriments["manganese"] ? Math.round(nutriments["manganese"] * 100) : '',
+        copper: nutriments["copper"] ? Math.round(nutriments["copper"] * 100) : '',
+        iodine: nutriments["iodine"] ? Math.round(nutriments["iodine"] * 100) : '',
+        cobalt: nutriments["cobalt"] ? Math.round(nutriments["cobalt"] * 100) : '',
+        fluoride: nutriments["fluoride"] ? Math.round(nutriments["fluoride"] * 100) : '',
+        selenium: nutriments["selenium"] ? Math.round(nutriments["selenium"] * 100) : '',
+        molybdenum: nutriments["molybdenum"] ? Math.round(nutriments["molybdenum"] * 100) : '',
+        chromium: nutriments["chromium"] ? Math.round(nutriments["chromium"] * 100) : '',
+        vitamin_a: nutriments["vitamin-a"] ? Math.round(nutriments["vitamin-a"] * 100) : '',
+        vitamin_b: nutriments["vitamin-b"] ? Math.round(nutriments["vitamin-b"] * 100) : '',
+        vitamin_b1: nutriments["vitamin-b1"] ? Math.round(nutriments["vitamin-b1"] * 100) : '',
+        vitamin_b2: nutriments["vitamin-b2"] ? Math.round(nutriments["vitamin-b2"] * 100) : '',
+        vitamin_b3: nutriments["vitamin-b3"] ? Math.round(nutriments["vitamin-b3"] * 100) : '',
+        vitamin_b5: nutriments["vitamin-b5"] ? Math.round(nutriments["vitamin-b5"] * 100) : '',
+        vitamin_b6: nutriments["vitamin-b6"] ? Math.round(nutriments["vitamin-b6"] * 100) : '',
+        vitamin_b7: nutriments["vitamin-b7"] ? Math.round(nutriments["vitamin-b7"] * 100) : '',
+        vitamin_b9: nutriments["vitamin-b9"] ? Math.round(nutriments["vitamin-b9"] * 100) : '',
+        vitamin_b12: nutriments["vitamin-b12"] ? Math.round(nutriments["vitamin-b12"] * 100) : '',
+        vitamin_c: nutriments["vitamin-c"] ? Math.round(nutriments["vitamin-c"] * 100) : '',
+        vitamin_d: nutriments["vitamin-d"] ? Math.round(nutriments["vitamin-d"] * 100) : '',
+        vitamin_e: nutriments["vitamin-e"] ? Math.round(nutriments["vitamin-e"] * 100) : '',
+        vitamin_k: nutriments["vitamin-k"] ? Math.round(nutriments["vitamin-k"] * 100) : ''
       }
 
       console.log("Scanned product data from OpenFoodFacts:", scannedProductData)
 
-      // Display the returned data in the UI (or POST it to an API endpoint as needed)
       setScannedProduct(scannedProductData)
       setShowScanner(false)
       setScanError(null)
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error processing barcode:", error)
-      setScanError(error.message)
+      setScanError(error instanceof Error ? error.message : "An unexpected error occurred")
     } finally {
       setIsLoading(false)
     }
@@ -187,11 +188,20 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
         },
         body: JSON.stringify({
           ...scannedProduct,
+          // Convert empty strings to 0 for the API
+          calories: scannedProduct.calories || 0,
+          carbs: scannedProduct.carbs || 0,
+          fats: scannedProduct.fats || 0,
+          protein: scannedProduct.protein || 0,
           meal,
           date: currentDate.toISOString(),
         }),
       })
-      // ... rest of the save logic ...
+      if (!response.ok) {
+        throw new Error('Failed to save food entry')
+      }
+      setScannedProduct(null)
+      setShowScanner(false)
     } catch (err) {
       console.error("Error saving food entry:", err)
       alert("Failed to save food entry")
