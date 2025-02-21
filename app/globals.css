@@ -75,3 +75,8 @@
   }
 }
 
+/* Add smooth transitions for height changes */
+.overflow-hidden {
+  transition: all 0.2s ease-in-out;
+}
+

@@ -13,8 +13,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 interface FoodItem {
   food_ky: string
   foodName: string
-  quantity: number
+  brands: string
   unit: string
+  serving_size: string
   calories: number
   carbs: number
   fats: number
@@ -24,6 +25,9 @@ interface FoodItem {
 interface OpenFoodProduct {
   code: string;
   product_name: string;
+  brands: string;
+  serving_quantity_unit: string;
+  serving_size: string;
   nutriments: {
     [key: string]: number;
   }
@@ -44,6 +48,8 @@ export function AddFood({ meal }: AddFoodProps) {
   const [searchError, setSearchError] = useState<string | null>(null)
   
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null)
+  
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
   
   const router = useRouter()
 
@@ -119,21 +125,22 @@ export function AddFood({ meal }: AddFoodProps) {
     }
   }
 
-  const handleAddSearchResult = async (product: OpenFoodProduct) => {
+  const handleAddSearchResult = (product: OpenFoodProduct) => {
     const nutriments = product.nutriments || {}
     const foodData: FoodItem = {
-      food_ky: product.code, // Use barcode as key
+      food_ky: product.code,
       foodName: product.product_name || "Unknown Food",
+      brands: product.brands || "Unknown Brand",
+      unit: product.serving_quantity_unit || "g",
       calories: Math.round(nutriments["energy-kcal_100g"] || 0),
       carbs: Math.round(nutriments["carbohydrates_100g"] || 0),
       fats: Math.round(nutriments["fat_100g"] || 0),
       protein: Math.round(nutriments["proteins_100g"] || 0),
-      quantity: 100, // default serving
-      unit: "g"
+      serving_size: product.serving_size || "g",
     }
 
-    // Instead of saving immediately, store the foodData for confirmation
     setSelectedFood(foodData)
+    setExpandedItemId(product.code)
   }
 
   // New: Function to confirm and save the selected food entry
@@ -174,21 +181,6 @@ export function AddFood({ meal }: AddFoodProps) {
       </CardHeader>
       <CardContent className="p-4 md:p-6">
         <div className="space-y-6">
-          {/* Confirmation Form for Selected Food */}
-          {selectedFood && (
-            <div className="border p-4 bg-gray-100 mb-4">
-              <h3 className="text-lg font-bold">Confirm Food Entry</h3>
-              <p><strong>Name:</strong> {selectedFood.foodName}</p>
-              <p><strong>Calories:</strong> {selectedFood.calories}</p>
-              <p><strong>Carbs:</strong> {selectedFood.carbs}</p>
-              <p><strong>Fats:</strong> {selectedFood.fats}</p>
-              <p><strong>Protein:</strong> {selectedFood.protein}</p>
-              <div className="mt-2 flex gap-2">
-                <Button onClick={confirmSave}>Confirm</Button>
-                <Button variant="outline" onClick={() => setSelectedFood(null)}>Cancel</Button>
-              </div>
-            </div>
-          )}
           {/* Search Section */}
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-muted-foreground">
@@ -228,21 +220,64 @@ export function AddFood({ meal }: AddFoodProps) {
           {searchResults.length > 0 && (
             <div className="space-y-4">
               <h4 className="text-lg font-semibold">Search Results</h4>
-              <ul>
+              <ul className="space-y-2">
                 {searchResults.map((product) => (
                   <li
                     key={product.code}
-                    className="border p-2 my-2 flex justify-between items-center"
+                    className="border rounded-lg overflow-hidden"
                   >
-                    <div>
-                      <p className="font-bold">{product.product_name || "Unnamed Product"}</p>
-                      <p className="text-sm">
-                        Calories: {product.nutriments["energy-kcal_100g"] || "N/A"}
-                      </p>
+                    <div className="p-4 flex justify-between items-center">
+                      <div>
+                        <p className="font-bold">{product.product_name || "Unnamed Product"}</p>
+                        <p className="text-sm">
+                          Calories: {product.nutriments["energy-kcal_100g"] || "N/A"}
+                        </p>
+                      </div>
+                      <Button 
+                        onClick={() => handleAddSearchResult(product)}
+                        variant={expandedItemId === product.code ? "secondary" : "default"}
+                      >
+                        Add
+                      </Button>
                     </div>
-                    <Button onClick={() => handleAddSearchResult(product)}>
-                      Add
-                    </Button>
+
+                    {/* Confirmation section that expands/collapses */}
+                    {expandedItemId === product.code && selectedFood && (
+                      <div className="p-4 bg-muted/50 border-t">
+                        <div className="space-y-2">
+                          <h3 className="font-semibold">Confirm Food Entry</h3>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <p><strong>Brand:</strong> {selectedFood.brands}</p>
+                            <p><strong>Calories:</strong> {selectedFood.calories}</p>
+                            <p><strong>Carbs:</strong> {selectedFood.carbs}g</p>
+                            <p><strong>Fats:</strong> {selectedFood.fats}g</p>
+                            <p><strong>Protein:</strong> {selectedFood.protein}g</p>
+                            <p><strong>Serving Size:</strong> {selectedFood.serving_size}</p>
+                          </div>
+                          <div className="flex gap-2 mt-4">
+                            <Button 
+                              size="sm" 
+                              onClick={() => {
+                                confirmSave()
+                                setExpandedItemId(null)
+                              }}
+                            >
+                              Confirm
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => {
+                                setExpandedItemId(null)
+                                setSelectedFood(null)
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
