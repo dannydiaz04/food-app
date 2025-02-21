@@ -285,47 +285,62 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
     setEditEntry(null)
   }
 
+  // Update the table header and rows to be more mobile-friendly
+  const TableHeaderContent = () => (
+    <TableRow className="bg-muted/70 dark:bg-muted/30 hover:bg-muted/70 dark:hover:bg-muted/30">
+      <TableHead className="w-[140px] sm:w-[300px] font-semibold text-primary">Food</TableHead>
+      <TableHead className="text-right font-semibold text-primary">Cal</TableHead>
+      <TableHead className="text-right hidden xs:table-cell font-semibold text-primary">Carbs</TableHead>
+      <TableHead className="text-right hidden xs:table-cell font-semibold text-primary">Fat</TableHead>
+      <TableHead className="text-right hidden xs:table-cell font-semibold text-primary">Protein</TableHead>
+      <TableHead className="text-right hidden sm:table-cell font-semibold text-primary">Sodium</TableHead>
+      <TableHead className="text-right hidden sm:table-cell font-semibold text-primary">Sugar</TableHead>
+      <TableHead className="text-right w-[80px] font-semibold text-primary">Actions</TableHead>
+    </TableRow>
+  )
+
   return (
     <>
       <Card className="w-full">
-        <CardHeader className="border-b">
+        <CardHeader className="border-b p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-lg font-semibold">Your Flavor Journal For:</div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" onClick={() => navigateDate(-1)}>
+            <div className="text-base sm:text-lg font-semibold">Your Flavor Journal For:</div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button variant="outline" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" onClick={() => navigateDate(-1)}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-md">
-                <span className="font-medium text-sm sm:text-base">{formatDate(currentDate)}</span>
-                <Calendar className="h-4 w-4 text-primary" />
+              <div className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-primary/10 rounded-md flex-1 sm:flex-initial justify-center">
+                <span className="font-medium text-sm sm:text-base truncate">{formatDate(currentDate)}</span>
+                <Calendar className="h-4 w-4 text-primary hidden xs:block" />
               </div>
-              <Button variant="outline" size="icon" onClick={() => navigateDate(1)}>
+              <Button variant="outline" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" onClick={() => navigateDate(1)}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="grid gap-6 p-2 sm:p-6">
+          <div className="grid gap-4 sm:gap-6 p-2 sm:p-6">
             {mealSections.map((section) => (
-              <div key={section.name} className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-muted/50 dark:bg-muted/20 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold text-foreground/90">
+              <div key={section.name} className="space-y-3 sm:space-y-4">
+                <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 bg-muted/50 dark:bg-muted/20 p-3 sm:p-4 rounded-lg">
+                  <h3 className="text-base sm:text-lg font-semibold text-foreground/90">
                     {section.name.charAt(0).toUpperCase() + section.name.slice(1)}
                   </h3>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 w-full xs:w-auto">
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className="text-primary flex-1 sm:flex-none hover:bg-primary/10"
+                      className="text-primary flex-1 xs:flex-none hover:bg-primary/10 h-8"
                       asChild
                     >
                       <Link href={`/add-food/${section.name.toLowerCase()}?date=${currentDate?.toISOString() || ''}`}>
                         <Plus className="h-4 w-4 mr-1" />
-                        Add Food
+                        <span className="hidden xs:inline">Add Food</span>
+                        <span className="xs:hidden">Add</span>
                       </Link>
                     </Button>
-                    <div className="relative flex-1 sm:flex-none" ref={(el) => {
+                    <div className="relative flex-1 xs:flex-none" ref={(el) => {
                       if (el) {
                         dropdownRefs.current[section.name] = el;
                       }
@@ -337,7 +352,6 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
                         onClick={() => handleQuickToolsClick(section.name)}
                       >
                         <Settings2 className="h-4 w-4 mr-1" />
-                        Quick Tools
                       </Button>
                       {dropdownOpen === section.name && (
                         <>
@@ -368,16 +382,7 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
                 <div className="overflow-x-auto rounded-md border bg-card shadow-sm">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-muted/70 dark:bg-muted/30 hover:bg-muted/70 dark:hover:bg-muted/30">
-                        <TableHead className="w-[140px] sm:w-[300px] font-semibold text-primary">Food</TableHead>
-                        <TableHead className="text-right font-semibold text-primary">Cal</TableHead>
-                        <TableHead className="text-right font-semibold text-primary">Carbs</TableHead>
-                        <TableHead className="text-right font-semibold text-primary">Fat</TableHead>
-                        <TableHead className="text-right font-semibold text-primary">Protein</TableHead>
-                        <TableHead className="text-right hidden sm:table-cell font-semibold text-primary">Sodium</TableHead>
-                        <TableHead className="text-right hidden sm:table-cell font-semibold text-primary">Sugar</TableHead>
-                        <TableHead className="text-right font-semibold text-primary">Actions</TableHead>
-                      </TableRow>
+                      <TableHeaderContent />
                     </TableHeader>
                     <TableBody>
                       {isLoading ? (
@@ -419,19 +424,21 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
                               key={entry.food_ky}
                               className="border-b border-border/50 transition-colors bg-background hover:bg-accent/50 dark:bg-muted/5 dark:hover:bg-accent/20"
                             >
-                              <TableCell className="w-[140px] sm:w-[300px] font-medium text-foreground/90">{entry.foodName}</TableCell>
-                              <TableCell className="text-right tabular-nums text-foreground/80">{entry.calories?.toString() || '0'}</TableCell>
-                              <TableCell className="text-right tabular-nums text-foreground/80">{entry.carbs?.toString() || '0'}</TableCell>
-                              <TableCell className="text-right tabular-nums text-foreground/80">{entry.fats?.toString() || '0'}</TableCell>
-                              <TableCell className="text-right tabular-nums text-foreground/80">{entry.protein?.toString() || '0'}</TableCell>
-                              <TableCell className="text-right hidden sm:table-cell tabular-nums text-foreground/80">{entry.sodium?.toString() || '0'}</TableCell>
-                              <TableCell className="text-right hidden sm:table-cell tabular-nums text-foreground/80">{entry.sugar?.toString() || '0'}</TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex justify-end gap-2">
+                              <TableCell className="w-[140px] sm:w-[300px] font-medium text-foreground/90">
+                                <div className="truncate max-w-[120px] sm:max-w-none">{entry.foodName}</div>
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums text-foreground/80">{entry.calories}</TableCell>
+                              <TableCell className="text-right hidden xs:table-cell tabular-nums text-foreground/80">{entry.carbs}</TableCell>
+                              <TableCell className="text-right hidden xs:table-cell tabular-nums text-foreground/80">{entry.fats}</TableCell>
+                              <TableCell className="text-right hidden xs:table-cell tabular-nums text-foreground/80">{entry.protein}</TableCell>
+                              <TableCell className="text-right hidden sm:table-cell tabular-nums text-foreground/80">{entry.sodium}</TableCell>
+                              <TableCell className="text-right hidden sm:table-cell tabular-nums text-foreground/80">{entry.sugar}</TableCell>
+                              <TableCell className="text-right p-1 sm:p-4">
+                                <div className="flex justify-end gap-1 sm:gap-2">
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                                    className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10"
                                     onClick={() => handleEditClick(entry)}
                                   >
                                     <Edit2 className="h-4 w-4" />
@@ -439,7 +446,7 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                    className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                                     onClick={() => setDeleteEntryId(entry.food_ky)}
                                   >
                                     <Trash2 className="h-4 w-4" />
