@@ -217,7 +217,7 @@ export function FlavorJournal({ meal }: FlavorJournalProps) {
                         <TableHead className="text-right">Cal</TableHead>
                         <TableHead className="text-right">Carbs</TableHead>
                         <TableHead className="text-right">Fat</TableHead>
-                        <TableHead className="text-right">Prot</TableHead>
+                        <TableHead className="text-right">Protein</TableHead>
                         <TableHead className="text-right hidden sm:table-cell">Sodium</TableHead>
                         <TableHead className="text-right hidden sm:table-cell">Sugar</TableHead>
                       </TableRow>
