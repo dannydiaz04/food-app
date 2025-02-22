@@ -21,7 +21,7 @@ export function Navigation() {
       <nav className="bg-background border-b p-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <Link href="/" className="text-green-400 hover:text-green-300 text-xl font-bold">
-            Food Tracker
+            Flavor Journal
           </Link>
           <div className="hidden md:flex items-center space-x-6">
             {navItems.map((item) => (
