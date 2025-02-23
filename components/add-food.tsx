@@ -22,6 +22,33 @@ interface FoodItem {
   carbs: number
   fats: number
   protein: number
+  sugar?: number
+  fiber?: number
+  vitamin_a?: number
+  vitamin_c?: number
+  // add the others that are available
+  calcium?: number
+  iron?: number
+  magnesium?: number
+  phosphorus?: number
+  potassium?: number
+  sodium?: number
+  zinc?: number
+  vitamin_b1?: number
+  vitamin_b2?: number
+  vitamin_b3?: number
+  vitamin_b5?: number
+  vitamin_b6?: number
+  vitamin_b7?: number
+  vitamin_b9?: number
+  vitamin_b12?: number
+  vitamin_d?: number
+  vitamin_e?: number
+  vitamin_k?: number
+  alcohol?: number
+  caffeine?: number
+  
+  
 }
 
 interface OpenFoodProduct {
@@ -52,6 +79,8 @@ export function AddFood({ meal }: AddFoodProps) {
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null)
   
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
+  
+  const [showNutrition, setShowNutrition] = useState(false)
   
   const router = useRouter()
 
@@ -253,6 +282,10 @@ export function AddFood({ meal }: AddFoodProps) {
       setLoading(false)
     }
   }
+
+  const toggleNutrition = () => {
+    setShowNutrition(prev => !prev);
+  };
 
   return (
     <Card className="w-full">
@@ -483,6 +516,22 @@ export function AddFood({ meal }: AddFoodProps) {
             {!loading && !error && recentFoods.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
                 No recent foods found. Foods you add will appear here.
+              </div>
+            )}
+          </div>
+
+          <div>
+            <Button onClick={toggleNutrition} className="mt-2">
+              {showNutrition ? "Hide Nutrition" : "View Nutrition"}
+            </Button>
+
+            {showNutrition && selectedFood && (
+              <div className="mt-4 p-4 border rounded">
+                <h3 className="font-bold">Nutritional Information</h3>
+                <p>Sugars: {selectedFood.sugar}g</p>
+                <p>Fiber: {selectedFood.fiber}g</p>
+                <p>Vitamin A: {selectedFood.vitamin_a} IU</p>
+                <p>Vitamin C: {selectedFood.vitamin_c} mg</p>
               </div>
             )}
           </div>
