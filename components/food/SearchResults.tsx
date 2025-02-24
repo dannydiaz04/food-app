@@ -54,34 +54,38 @@ export function SearchResults({
               </div>
 
               {expandedItemId === product.code && selectedFood && (
-                <div className="mt-4 space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="w-full">
-                      <Label htmlFor="serving-size">Serving Size</Label>
-                      <Input
-                        id="serving-size"
-                        type="number"
-                        value={selectedFood.serving_size}
-                        onChange={onServingSizeChange}
-                        className="w-full"
-                      />
-                    </div>
-                    <div className="w-full">
-                      <Label htmlFor="unit">Unit</Label>
-                      <Select onValueChange={onUnitChange} value={selectedFood.unit}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select unit" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="g">grams</SelectItem>
-                          <SelectItem value="oz">ounces</SelectItem>
-                          <SelectItem value="cup">cups</SelectItem>
-                          <SelectItem value="tbsp">tablespoons</SelectItem>
-                          <SelectItem value="tsp">teaspoons</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                    <div className="mt-4 space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="w-full">
+                          <Label htmlFor="serving-size">Serving Size</Label>
+                          <Input
+                            id="serving-size"
+                            type="number"
+                            value={selectedFood.serving_quantity ?? selectedFood.serving_size}
+                            onChange={onServingSizeChange}
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="w-full">
+                          <Label htmlFor="unit">Unit</Label>
+                          <Select 
+                            onValueChange={onUnitChange} 
+                            value={selectedFood.serving_quantity_unit ?? selectedFood.unit}
+                            // disabled={selectedFood.serving_quantity_unit !== null}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select unit" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="g">grams</SelectItem>
+                              <SelectItem value="oz">ounces</SelectItem>
+                              <SelectItem value="cup">cups</SelectItem>
+                              <SelectItem value="tbsp">tablespoons</SelectItem>
+                              <SelectItem value="tsp">teaspoons</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                     <div className="p-2 bg-muted rounded">Calories: {selectedFood.calories}</div>

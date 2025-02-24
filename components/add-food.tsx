@@ -153,6 +153,8 @@ export function AddFood({ meal }: AddFoodProps) {
       }
 
       const servingSizeG = 100
+      const serving_quantity = product.product_quantity || null
+      const serving_quantity_unit = product.product_quantity_unit || null
 
       const foodData: FoodItem = {
         food_ky: product.code,
@@ -161,6 +163,8 @@ export function AddFood({ meal }: AddFoodProps) {
         unit: "g",
         serving_size: String(servingSizeG),
         serving_size_g: servingSizeG,
+        serving_quantity: serving_quantity || 100,
+        serving_quantity_unit: serving_quantity_unit || "g",
         perGramValues: perGram,
         calories: Math.round(perGram.calories * servingSizeG),
         carbs: Math.round(perGram.carbs * servingSizeG),
@@ -355,4 +359,3 @@ export function AddFood({ meal }: AddFoodProps) {
     </div>
   )
 }
-

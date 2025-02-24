@@ -8,6 +8,7 @@ import { Scan } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { useSearchParams } from 'next/navigation'
+import { MealEntry } from "@/components/meal-entry"
 
 // Dynamically import BarcodeScanner with no SSR
 const BarcodeScanner = dynamic(
@@ -65,9 +66,73 @@ interface FoodProduct {
 //   nutriments: any; // Contains macro and micronutrient information from OpenFoodFacts
 }
 
+interface FoodItem {
+  food_ky: string;
+  foodName: string;
+  brands: string;
+  unit: string;
+  serving_size: string;
+  serving_size_g: number;
+  serving_quantity: string | number
+  serving_quantity_unit: string
+  perGramValues: {
+    calories: number;
+    carbs: number;
+    fats: number;
+    protein: number;
+    sugar: number;
+    fiber: number;
+    vitamin_a: number;
+    vitamin_c: number;
+    calcium: number;
+    iron: number;
+    magnesium: number;
+    phosphorus: number;
+    potassium: number;
+    sodium: number;
+  };
+  calories: number;
+  carbs: number;
+  fats: number;
+  protein: number;
+  sugar: number;
+  fiber: number;
+  vitamin_a: number;
+  vitamin_c: number;
+  calcium: number;
+  iron: number;
+  magnesium: number;
+  phosphorus: number;
+  potassium: number;
+  sodium: number;
+}
+
+// Helper function to map OpenFoodFacts units to our dropdown options
+const mapUnit = (unit: string): string => {
+  const unitMap: { [key: string]: string } = {
+    'g': 'g',
+    'gram': 'g',
+    'grams': 'g',
+    'oz': 'oz',
+    'ounce': 'oz',
+    'ounces': 'oz',
+    'tbsp': 'tbsp',
+    'tablespoon': 'tbsp',
+    'tablespoons': 'tbsp',
+    'tsp': 'tsp',
+    'teaspoon': 'tsp',
+    'teaspoons': 'tsp',
+    'cup': 'cup',
+    'cups': 'cup'
+  };
+  
+  return unitMap[unit.toLowerCase()] || 'g';
+};
+
 export function AddFoodClient({ meal }: AddFoodClientProps) {
   const searchParams = useSearchParams()
   const dateParam = searchParams.get('date')
+  const barcodeParam = searchParams.get('barcode')
   const [currentDate, setCurrentDate] = useState<Date | null>(null)
   
   useEffect(() => {
@@ -82,31 +147,41 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
   const [scanError, setScanError] = useState<string | null>(null)
   const [scannedProduct, setScannedProduct] = useState<FoodProduct | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [showMealEntry, setShowMealEntry] = useState(false)
+  const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null)
+
+  useEffect(() => {
+    if (barcodeParam) {
+      handleBarcodeDetected(barcodeParam);
+    }
+  }, [barcodeParam]);
 
   async function handleBarcodeDetected(barcode: string) {
     try {
-      setIsLoading(true)
+      setIsLoading(true);
+      console.log('Processing barcode:', barcode); // Debug log
 
-      const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`)
+      const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+      console.log('API Response status:', response.status); // Debug log
+      
+      const data = await response.json();
+      console.log('API Response data:', data); // Debug log
       
       if (!response.ok) {
-        throw new Error("Failed to fetch product from OpenFoodFacts")
+        throw new Error(`API request failed with status ${response.status}`);
       }
       
-      const data = await response.json()
-      console.log("OpenFoodFacts response:", data)
-      
-      if (data.status !== 1) {
-        throw new Error("Product not found in OpenFoodFacts")
+      if (data.status !== 1 || !data.product) {
+        throw new Error("Product not found in OpenFoodFacts");
       }
       
-      const product = data.product
-      const nutriments = product.nutriments || {}
+      const product = data.product;
+      const nutriments = product.nutriments || {};
       
       // Helper function to convert nutriment value
       const getNutrimentValue = (key: string): number | '' => {
-        const value = nutriments[key]
-        return value ? Math.round(value) : ''
+        const value = nutriments[key];
+        return value ? Math.round(value) : '';
       }
 
       // Map the returned product data into your FoodProduct type
@@ -155,14 +230,59 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
 
       console.log("Scanned product data from OpenFoodFacts:", scannedProductData)
 
-      setScannedProduct(scannedProductData)
+      // Convert the scanned product into FoodItem format
+      const foodData: FoodItem = {
+        food_ky: product.code,
+        foodName: product.product_name || "Unknown Food",
+        brands: product.brands || "Unknown Brand",
+        unit: mapUnit(product.serving_quantity_unit || ''),
+        serving_size: product.serving_quantity?.toString() || "100",
+        serving_size_g: product.serving_quantity || 100,
+        perGramValues: {
+          calories: (nutriments["energy-kcal_100g"] || 0) / 100,
+          carbs: (nutriments["carbohydrates_100g"] || 0) / 100,
+          fats: (nutriments["fat_100g"] || 0) / 100,
+          protein: (nutriments["proteins_100g"] || 0) / 100,
+          sugar: (nutriments["sugars_100g"] || 0) / 100,
+          fiber: (nutriments["fiber_100g"] || 0) / 100,
+          vitamin_a: (nutriments["vitamin-a_100g"] || 0) / 100,
+          vitamin_c: (nutriments["vitamin-c_100g"] || 0) / 100,
+          calcium: (nutriments["calcium_100g"] || 0) / 100,
+          iron: (nutriments["iron_100g"] || 0) / 100,
+          magnesium: (nutriments["magnesium_100g"] || 0) / 100,
+          phosphorus: (nutriments["phosphorus_100g"] || 0) / 100,
+          potassium: (nutriments["potassium_100g"] || 0) / 100,
+          sodium: (nutriments["sodium_100g"] || 0) / 100,
+        },
+        calories: nutriments["energy-kcal_100g"] || 0,
+        carbs: nutriments["carbohydrates_100g"] || 0,
+        fats: nutriments["fat_100g"] || 0,
+        protein: nutriments["proteins_100g"] || 0,
+        sugar: nutriments["sugars_100g"] || 0,
+        fiber: nutriments["fiber_100g"] || 0,
+        vitamin_a: nutriments["vitamin-a_100g"] || 0,
+        vitamin_c: nutriments["vitamin-c_100g"] || 0,
+        calcium: nutriments["calcium_100g"] || 0,
+        iron: nutriments["iron_100g"] || 0,
+        magnesium: nutriments["magnesium_100g"] || 0,
+        phosphorus: nutriments["phosphorus_100g"] || 0,
+        potassium: nutriments["potassium_100g"] || 0,
+        sodium: nutriments["sodium_100g"] || 0,
+      }
+
+      setSelectedFood(foodData)
+      setShowMealEntry(true)
       setShowScanner(false)
       setScanError(null)
     } catch (error) {
-      console.error("Error processing barcode:", error)
-      setScanError(error instanceof Error ? error.message : "An unexpected error occurred")
+      console.error("Error processing barcode:", error);
+      console.error("Full error details:", {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        error
+      }); // More detailed error logging
+      setScanError(error instanceof Error ? error.message : "An unexpected error occurred");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -202,6 +322,39 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
       }
       setScannedProduct(null)
       setShowScanner(false)
+    } catch (err) {
+      console.error("Error saving food entry:", err)
+      alert("Failed to save food entry")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleMealEntryClose = () => {
+    setShowMealEntry(false)
+    setSelectedFood(null)
+  }
+
+  const handleMealEntryConfirm = async () => {
+    if (!selectedFood || !currentDate) return
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/macro-calculator', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...selectedFood,
+          meal,
+          date: currentDate.toISOString(),
+        }),
+      })
+      if (!response.ok) {
+        throw new Error('Failed to save food entry')
+      }
+      setSelectedFood(null)
+      setShowMealEntry(false)
     } catch (err) {
       console.error("Error saving food entry:", err)
       alert("Failed to save food entry")
@@ -272,6 +425,13 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
       )}
 
       <AddFood meal={meal} />
+
+      <MealEntry
+        isOpen={showMealEntry}
+        onClose={handleMealEntryClose}
+        onConfirm={handleMealEntryConfirm}
+        selectedFood={selectedFood}
+      />
     </div>
   )
 }

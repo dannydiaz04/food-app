@@ -35,10 +35,15 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
     if (selectedFood) {
       setServingSize(selectedFood.serving_size)
       setUnit(selectedFood.unit)
-      setCalories(selectedFood.calories)
-      setCarbs(selectedFood.carbs)
-      setFats(selectedFood.fats)
-      setProtein(selectedFood.protein)
+      
+      const servingSizeNumber = parseFloat(selectedFood.serving_size)
+      if (!isNaN(servingSizeNumber)) {
+        const ratio = servingSizeNumber / 100
+        setCalories(Math.round(selectedFood.perGramValues.calories * ratio * 100))
+        setCarbs(Math.round(selectedFood.perGramValues.carbs * ratio * 100) / 10)
+        setFats(Math.round(selectedFood.perGramValues.fats * ratio * 100) / 10)
+        setProtein(Math.round(selectedFood.perGramValues.protein * ratio * 100) / 10)
+      }
     }
   }, [selectedFood])
 

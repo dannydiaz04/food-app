@@ -12,6 +12,8 @@ export interface FoodItem {
     protein: number
     // ... other nutritional values
   }
+  serving_quantity: string | number
+  serving_quantity_unit: string
   calories: number
   carbs: number
   fats: number
@@ -24,7 +26,10 @@ export interface OpenFoodProduct {
   code: string
   product_name: string
   brands: string
+  serving_quantity: string | number
   serving_quantity_unit: string
+  product_quantity: string | number
+  product_quantity_unit: string
   serving_size?: string
   nutriments: {
     [key: string]: number
