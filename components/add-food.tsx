@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
@@ -7,7 +9,7 @@ import { SearchForm } from "./food/SearchForm"
 import { SearchResults } from "./food/SearchResults"
 import { RecentFoods } from "./food/RecentFoods"
 import { MealEntry } from "@/components/meal-entry"
-import { FoodItem, OpenFoodProduct } from "@/types/food"
+import type { FoodItem, OpenFoodProduct } from "@/types/food"
 import { convertToGrams, convertFromGrams } from "@/utils/unit-conversion"
 
 interface AddFoodProps {
@@ -37,7 +39,7 @@ export function AddFood({ meal }: AddFoodProps) {
         setError(null)
 
         const response = await fetch("/api/recent-foods", {
-          credentials: "include", // Include credentials for authentication
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -54,7 +56,7 @@ export function AddFood({ meal }: AddFoodProps) {
       } catch (err) {
         console.error("Error fetching recent foods:", err)
         setError(err instanceof Error ? err.message : "An unexpected error occurred")
-        setRecentFoods([]) // Reset foods on error
+        setRecentFoods([])
       } finally {
         setLoading(false)
       }
@@ -74,8 +76,8 @@ export function AddFood({ meal }: AddFoodProps) {
 
     setSearchLoading(true)
     setSearchError(null)
-    setHasSearched(true) // Set hasSearched to true
-    setPage(1) // Reset page number on new search
+    setHasSearched(true)
+    setPage(1)
 
     try {
       const response = await fetch(
@@ -85,10 +87,8 @@ export function AddFood({ meal }: AddFoodProps) {
       )
       const data = await response.json()
 
-      // Log the full JSON response from OpenFoodFacts so you can see all properties
       console.log("OpenFoodFacts full response:", data)
 
-      // Optionally, log each individual product to see its properties
       if (data && data.products) {
         data.products.forEach((product: any, index: number) => {
           console.log(`Product ${index} details:`, product)
@@ -117,7 +117,7 @@ export function AddFood({ meal }: AddFoodProps) {
       const data = await response.json()
 
       if (data && data.products) {
-        setSearchResults(prev => [...prev, ...data.products])
+        setSearchResults((prev) => [...prev, ...data.products])
         setPage(nextPage)
       }
     } catch (err) {
@@ -134,8 +134,7 @@ export function AddFood({ meal }: AddFoodProps) {
       setSelectedFood(null)
     } else {
       const nutriments = product.nutriments || {}
-      
-      // Store the per-gram values (divide by 100 since API gives per 100g)
+
       const perGram = {
         calories: (nutriments["energy-kcal_100g"] || 0) / 100,
         carbs: (nutriments["carbohydrates_100g"] || 0) / 100,
@@ -150,21 +149,19 @@ export function AddFood({ meal }: AddFoodProps) {
         magnesium: (nutriments["magnesium_100g"] || 0) / 100,
         phosphorus: (nutriments["phosphorus_100g"] || 0) / 100,
         potassium: (nutriments["potassium_100g"] || 0) / 100,
-        sodium: (nutriments["sodium_100g"] || 0) / 100
+        sodium: (nutriments["sodium_100g"] || 0) / 100,
       }
 
-      // Default serving size to 100g if not provided
       const servingSizeG = 100
 
       const foodData: FoodItem = {
         food_ky: product.code,
         foodName: product.product_name || "Unknown Food",
         brands: product.brands || "Unknown Brand",
-        unit: "g", // Default to grams
+        unit: "g",
         serving_size: String(servingSizeG),
         serving_size_g: servingSizeG,
         perGramValues: perGram,
-        // Calculate initial values for 100g serving
         calories: Math.round(perGram.calories * servingSizeG),
         carbs: Math.round(perGram.carbs * servingSizeG),
         fats: Math.round(perGram.fats * servingSizeG),
@@ -178,7 +175,7 @@ export function AddFood({ meal }: AddFoodProps) {
         magnesium: Math.round(perGram.magnesium * servingSizeG),
         phosphorus: Math.round(perGram.phosphorus * servingSizeG),
         potassium: Math.round(perGram.potassium * servingSizeG),
-        sodium: Math.round(perGram.sodium * servingSizeG)
+        sodium: Math.round(perGram.sodium * servingSizeG),
       }
 
       setSelectedFood(foodData)
@@ -186,63 +183,20 @@ export function AddFood({ meal }: AddFoodProps) {
     }
   }
 
-  // Add new function to handle unit/serving size changes
-  const updateNutritionalValues = (food: FoodItem, newUnit: string, newServingSize: string) => {
-    const newServingSizeNum = Number.parseFloat(newServingSize)
-    if (!newServingSizeNum || newServingSizeNum <= 0) return food
-
-    // If switching to grams, calculate per-gram values
-    if (newUnit === "g") {
-      const originalServingG = food.serving_size_g || Number.parseFloat(food.serving_size)
-      const perGram = {
-        calories: food.calories / originalServingG,
-        carbs: food.carbs / originalServingG,
-        fats: food.fats / originalServingG,
-        protein: food.protein / originalServingG,
-      }
-
-      return {
-        ...food,
-        unit: newUnit,
-        serving_size: newServingSize,
-        calories: Math.round(perGram.calories * newServingSizeNum),
-        carbs: Math.round(perGram.carbs * newServingSizeNum),
-        fats: Math.round(perGram.fats * newServingSizeNum),
-        protein: Math.round(perGram.protein * newServingSizeNum),
-      }
-    }
-
-    // For other units, maintain the ratio with original serving size
-    const ratio = newServingSizeNum / Number.parseFloat(food.serving_size)
-    return {
-      ...food,
-      unit: newUnit,
-      serving_size: newServingSize,
-      calories: Math.round(food.calories * ratio),
-      carbs: Math.round(food.carbs * ratio),
-      fats: Math.round(food.fats * ratio),
-      protein: Math.round(food.protein * ratio),
-    }
-  }
-
-  // Add these to the expanded confirmation section
   const handleUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     if (!selectedFood || !selectedFood.perGramValues) return
 
     const newUnit = e.target.value
-    const currentServingSize = parseFloat(selectedFood.serving_size || "0")
-    
-    // Convert current serving size to grams, then to the new unit
+    const currentServingSize = Number.parseFloat(selectedFood.serving_size || "0")
+
     const currentGrams = convertToGrams(currentServingSize, selectedFood.unit)
     const newServingSize = convertFromGrams(currentGrams, newUnit)
 
-    // Update the food with the new unit and converted serving size
     const updatedFood = {
       ...selectedFood,
       unit: newUnit,
-      serving_size: String(Number(newServingSize.toFixed(2))), // Round to 2 decimal places
-      serving_size_g: currentGrams, // Keep the gram weight the same
-      // All nutritional values stay the same since the actual weight hasn't changed
+      serving_size: String(Number(newServingSize.toFixed(2))),
+      serving_size_g: currentGrams,
     }
 
     setSelectedFood(updatedFood)
@@ -252,7 +206,7 @@ export function AddFood({ meal }: AddFoodProps) {
     if (!selectedFood || !selectedFood.perGramValues) return
 
     const newServingSize = e.target.value
-    const newServingSizeNum = parseFloat(newServingSize || "0")
+    const newServingSizeNum = Number.parseFloat(newServingSize || "0")
 
     if (isNaN(newServingSizeNum) || newServingSizeNum <= 0) {
       setSelectedFood({
@@ -272,15 +226,13 @@ export function AddFood({ meal }: AddFoodProps) {
         magnesium: 0,
         phosphorus: 0,
         potassium: 0,
-        sodium: 0
+        sodium: 0,
       })
       return
     }
 
-    // Convert the serving size to grams based on the current unit
     const servingSizeInGrams = convertToGrams(newServingSizeNum, selectedFood.unit)
 
-    // Calculate new values based on per-gram values
     const { perGramValues } = selectedFood
     const updatedFood = {
       ...selectedFood,
@@ -299,13 +251,12 @@ export function AddFood({ meal }: AddFoodProps) {
       magnesium: Math.round(perGramValues.magnesium * servingSizeInGrams),
       phosphorus: Math.round(perGramValues.phosphorus * servingSizeInGrams),
       potassium: Math.round(perGramValues.potassium * servingSizeInGrams),
-      sodium: Math.round(perGramValues.sodium * servingSizeInGrams)
+      sodium: Math.round(perGramValues.sodium * servingSizeInGrams),
     }
 
     setSelectedFood(updatedFood)
   }
 
-  // New: Function to confirm and save the selected food entry
   const handleConfirm = async () => {
     if (!selectedFood) return
     setShowMealEntry(true)
@@ -345,50 +296,56 @@ export function AddFood({ meal }: AddFoodProps) {
   }
 
   return (
-    <div className="w-full max-w-screen-xl mx-auto px-4 py-6">
-      <Card className="w-full">
-        <CardHeader className="border-b">
-          <h2 className="text-xl md:text-2xl font-bold">
-            Add Food To {meal.charAt(0).toUpperCase() + meal.slice(1)}
-          </h2>
+    <div className="w-full max-w-screen-xl mx-auto p-4">
+      <Card className="w-full overflow-hidden">
+        <CardHeader className="border-b px-4 py-4">
+          <h2 className="text-xl md:text-2xl font-bold">Add Food To {meal.charAt(0).toUpperCase() + meal.slice(1)}</h2>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="grid gap-4 sm:gap-6 p-4 sm:p-6">
-            <SearchForm
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              onSearch={handleSearch}
-              onQuickAdd={handleQuickAddCalories}
-              isLoading={searchLoading}
-            />
-            
-            <SearchResults
-              results={searchResults}
-              expandedItemId={expandedItemId}
-              selectedFood={selectedFood}
-              onResultClick={handleAddSearchResult}
-              onServingSizeChange={handleServingSizeChange}
-              onUnitChange={handleUnitChange}
-              onConfirm={handleConfirm}
-              onCancel={() => {
-                setExpandedItemId(null)
-                
-              }}
-              onLoadMore={loadMore}
-              searchLoading={searchLoading}
-            />
-            
-            <RecentFoods
-              loading={loading}
-              error={error}
-              foods={recentFoods}
-              onSort={(sortBy) => {/* implement sorting */}}
-              onCheckFood={(foodKy) => {/* implement checking */}}
-            />
+        <CardContent>
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-6">
+              <div className="md:sticky top-0 bg-background pt-4 pb-2 -mx-4 px-4 z-10">
+                <SearchForm
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  onSearch={handleSearch}
+                  onQuickAdd={handleQuickAddCalories}
+                  isLoading={searchLoading}
+                />
+              </div>
+              <SearchResults
+                results={searchResults}
+                expandedItemId={expandedItemId}
+                selectedFood={selectedFood}
+                onResultClick={handleAddSearchResult}
+                onServingSizeChange={handleServingSizeChange}
+                onUnitChange={handleUnitChange}
+                onConfirm={handleConfirm}
+                onCancel={() => {
+                  setExpandedItemId(null)
+                  setSelectedFood(null)
+                }}
+                onLoadMore={loadMore}
+                searchLoading={searchLoading}
+              />
+            </div>
+            <div className="space-y-6">
+              <RecentFoods
+                loading={loading}
+                error={error}
+                foods={recentFoods}
+                onSort={(sortBy) => {
+                  // Add your sort logic here
+                }}
+                onCheckFood={(foodKy) => {
+                  // Add your check food logic here
+                }}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
-      
+
       <MealEntry
         isOpen={showMealEntry}
         onClose={handleMealEntryClose}
@@ -398,3 +355,4 @@ export function AddFood({ meal }: AddFoodProps) {
     </div>
   )
 }
+

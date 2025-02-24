@@ -2,7 +2,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { FoodItem } from "@/types/food"
+import type { FoodItem } from "@/types/food"
 
 interface RecentFoodsProps {
   loading: boolean
@@ -31,45 +31,46 @@ export function RecentFoods({ loading, error, foods, onSort, onCheckFood }: Rece
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <h4 className="text-lg font-semibold">Recent Foods</h4>
-        <Button variant="outline" onClick={() => onSort('date')}>
+        <Button variant="outline" onClick={() => onSort("date")} className="w-full sm:w-auto">
           Sort by Date
         </Button>
       </div>
 
       <div className="border rounded-lg overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Food Name</TableHead>
-              <TableHead>Brand</TableHead>
-              <TableHead>Serving Size</TableHead>
-              <TableHead>Calories</TableHead>
-              <TableHead>Protein</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {foods.map((food) => (
-              <TableRow key={food.food_ky}>
-                <TableCell>{food.foodName}</TableCell>
-                <TableCell>{food.brands}</TableCell>
-                <TableCell>{food.serving_size} {food.unit}</TableCell>
-                <TableCell>{food.calories}</TableCell>
-                <TableCell>{food.protein}g</TableCell>
-                <TableCell>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => onCheckFood(food.food_ky)}
-                  >
-                    Add
-                  </Button>
-                </TableCell>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="">Food Name</TableHead>
+                <TableHead className=" hidden sm:table-cell">Brand</TableHead>
+                <TableHead className=" hidden md:table-cell">Serving Size</TableHead>
+                <TableHead className="">Calories</TableHead>
+                <TableHead className=" hidden lg:table-cell">Protein</TableHead>
+                <TableHead className="">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {foods.map((food) => (
+                <TableRow key={food.food_ky}>
+                  <TableCell className="">{food.foodName}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{food.brands}</TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {food.serving_size} {food.unit}
+                  </TableCell>
+                  <TableCell className="">{food.calories}</TableCell>
+                  <TableCell className="hidden lg:table-cell">{food.protein}g</TableCell>
+                  <TableCell className="">
+                    <Button variant="ghost" onClick={() => onCheckFood(food.food_ky)}>
+                      Add
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   )
