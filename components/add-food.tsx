@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,6 +20,22 @@ interface FoodItem {
   unit: string
   serving_size: string
   serving_size_g?: number
+  perGramValues?: {
+    calories: number
+    carbs: number
+    fats: number
+    protein: number
+    sugar: number
+    fiber: number
+    vitamin_a: number
+    vitamin_c: number
+    calcium: number
+    iron: number
+    magnesium: number
+    phosphorus: number
+    potassium: number
+    sodium: number
+  }
   calories: number
   carbs: number
   fats: number
@@ -26,7 +44,6 @@ interface FoodItem {
   fiber?: number
   vitamin_a?: number
   vitamin_c?: number
-  // add the others that are available
   calcium?: number
   iron?: number
   magnesium?: number
@@ -47,18 +64,17 @@ interface FoodItem {
   vitamin_k?: number
   alcohol?: number
   caffeine?: number
-  
-  
 }
 
 interface OpenFoodProduct {
-  code: string;
-  product_name: string;
-  brands: string;
-  serving_quantity_unit: string;
-  serving_size: string;
+  abbreviated_product_name: string
+  code: string
+  product_name: string
+  brands: string
+  serving_quantity_unit: string
+  serving_size?: string // Make serving_size optional
   nutriments: {
-    [key: string]: number;
+    [key: string]: number
   }
 }
 
@@ -66,22 +82,52 @@ interface AddFoodProps {
   meal: string
 }
 
+// Update conversion functions with additional units
+const convertToGrams = (amount: number, unit: string): number => {
+  switch (unit.toLowerCase()) {
+    case "g":
+      return amount;
+    case "oz":
+      return amount * 28.3495; // 1 oz = 28.3495 grams
+    case "tbsp":
+      return amount * 14.7868; // 1 tbsp ≈ 14.7868 grams
+    case "tsp":
+      return amount * 4.92892; // 1 tsp ≈ 4.92892 grams
+    case "cup":
+      return amount * 236.588; // 1 cup = 236.588 grams
+    default:
+      return amount;
+  }
+};
+
+const convertFromGrams = (grams: number, unit: string): number => {
+  switch (unit.toLowerCase()) {
+    case "g":
+      return grams;
+    case "oz":
+      return grams / 28.3495;
+    case "tbsp":
+      return grams / 14.7868;
+    case "tsp":
+      return grams / 4.92892;
+    case "cup":
+      return grams / 236.588;
+    default:
+      return grams;
+  }
+};
+
 export function AddFood({ meal }: AddFoodProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [recentFoods, setRecentFoods] = useState<FoodItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
   const [searchResults, setSearchResults] = useState<OpenFoodProduct[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
-  
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null)
-  
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
-  
   const [showNutrition, setShowNutrition] = useState(false)
-  
   const router = useRouter()
 
   useEffect(() => {
@@ -89,17 +135,17 @@ export function AddFood({ meal }: AddFoodProps) {
       try {
         setLoading(true)
         setError(null)
-        
+
         const response = await fetch("/api/recent-foods", {
-          credentials: 'include', // Include credentials for authentication
+          credentials: "include", // Include credentials for authentication
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
         })
 
         const data = await response.json()
         console.log("Fetched food data:", data)
-        
+
         if (!response.ok) {
           throw new Error(data.error || "Failed to fetch recent foods")
         }
@@ -124,26 +170,26 @@ export function AddFood({ meal }: AddFoodProps) {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!searchQuery.trim()) return;
+    if (!searchQuery.trim()) return
 
     setSearchLoading(true)
     setSearchError(null)
     try {
       const response = await fetch(
         `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(
-          searchQuery
-        )}&search_simple=1&action=process&json=1`
+          searchQuery,
+        )}&search_simple=1&action=process&json=1`,
       )
       const data = await response.json()
-      
+
       // Log the full JSON response from OpenFoodFacts so you can see all properties
-      console.log("OpenFoodFacts full response:", data);
+      console.log("OpenFoodFacts full response:", data)
 
       // Optionally, log each individual product to see its properties
       if (data && data.products) {
         data.products.forEach((product: any, index: number) => {
-          console.log(`Product ${index} details:`, product);
-        });
+          console.log(`Product ${index} details:`, product)
+        })
         setSearchResults(data.products)
       } else {
         setSearchResults([])
@@ -157,54 +203,71 @@ export function AddFood({ meal }: AddFoodProps) {
   }
 
   const handleAddSearchResult = (product: OpenFoodProduct) => {
-    const nutriments = product.nutriments || {}
-    const servingSizeG = parseFloat(product.serving_size || '0') || 100 // Default to 100g if not provided
-    
-    // Calculate per 100g values first
-    const per100g = {
-      calories: Math.round(nutriments["energy-kcal_100g"] || 0),
-      carbs: Math.round(nutriments["carbohydrates_100g"] || 0),
-      fats: Math.round(nutriments["fat_100g"] || 0),
-      protein: Math.round(nutriments["proteins_100g"] || 0),
-    }
+    if (expandedItemId === product.code) {
+      setExpandedItemId(null)
+      setSelectedFood(null)
+    } else {
+      const nutriments = product.nutriments || {}
+      
+      // Store the per-gram values (divide by 100 since API gives per 100g)
+      const perGram = {
+        calories: (nutriments["energy-kcal_100g"] || 0) / 100,
+        carbs: (nutriments["carbohydrates_100g"] || 0) / 100,
+        fats: (nutriments["fat_100g"] || 0) / 100,
+        protein: (nutriments["proteins_100g"] || 0) / 100,
+        sugar: (nutriments["sugars_100g"] || 0) / 100,
+        fiber: (nutriments["fiber_100g"] || 0) / 100,
+        vitamin_a: (nutriments["vitamin-a_100g"] || 0) / 100,
+        vitamin_c: (nutriments["vitamin-c_100g"] || 0) / 100,
+        calcium: (nutriments["calcium_100g"] || 0) / 100,
+        iron: (nutriments["iron_100g"] || 0) / 100,
+        magnesium: (nutriments["magnesium_100g"] || 0) / 100,
+        phosphorus: (nutriments["phosphorus_100g"] || 0) / 100,
+        potassium: (nutriments["potassium_100g"] || 0) / 100,
+        sodium: (nutriments["sodium_100g"] || 0) / 100
+      }
 
-    // Calculate per serving values
-    const perServing = {
-      calories: Math.round((per100g.calories * servingSizeG) / 100),
-      carbs: Math.round((per100g.carbs * servingSizeG) / 100),
-      fats: Math.round((per100g.fats * servingSizeG) / 100),
-      protein: Math.round((per100g.protein * servingSizeG) / 100),
-    }
+      // Default serving size to 100g if not provided
+      const servingSizeG = 100
 
-    const foodData: FoodItem = {
-      food_ky: product.code,
-      foodName: product.product_name || "Unknown Food",
-      brands: product.brands || "Unknown Brand",
-      unit: product.serving_quantity_unit || "g",
-      serving_size: product.serving_size || "100",
-      serving_size_g: servingSizeG,
-      calories: perServing.calories,
-      carbs: perServing.carbs,
-      fats: perServing.fats,
-      protein: perServing.protein,
-    }
+      const foodData: FoodItem = {
+        food_ky: product.code,
+        foodName: product.product_name || "Unknown Food",
+        brands: product.brands || "Unknown Brand",
+        unit: "g", // Default to grams
+        serving_size: String(servingSizeG),
+        serving_size_g: servingSizeG,
+        perGramValues: perGram,
+        // Calculate initial values for 100g serving
+        calories: Math.round(perGram.calories * servingSizeG),
+        carbs: Math.round(perGram.carbs * servingSizeG),
+        fats: Math.round(perGram.fats * servingSizeG),
+        protein: Math.round(perGram.protein * servingSizeG),
+        sugar: Math.round(perGram.sugar * servingSizeG),
+        fiber: Math.round(perGram.fiber * servingSizeG),
+        vitamin_a: Math.round(perGram.vitamin_a * servingSizeG),
+        vitamin_c: Math.round(perGram.vitamin_c * servingSizeG),
+        calcium: Math.round(perGram.calcium * servingSizeG),
+        iron: Math.round(perGram.iron * servingSizeG),
+        magnesium: Math.round(perGram.magnesium * servingSizeG),
+        phosphorus: Math.round(perGram.phosphorus * servingSizeG),
+        potassium: Math.round(perGram.potassium * servingSizeG),
+        sodium: Math.round(perGram.sodium * servingSizeG)
+      }
 
-    setSelectedFood(foodData)
-    setExpandedItemId(product.code)
+      setSelectedFood(foodData)
+      setExpandedItemId(product.code)
+    }
   }
 
   // Add new function to handle unit/serving size changes
-  const updateNutritionalValues = (
-    food: FoodItem,
-    newUnit: string,
-    newServingSize: string
-  ) => {
-    const newServingSizeNum = parseFloat(newServingSize)
+  const updateNutritionalValues = (food: FoodItem, newUnit: string, newServingSize: string) => {
+    const newServingSizeNum = Number.parseFloat(newServingSize)
     if (!newServingSizeNum || newServingSizeNum <= 0) return food
 
     // If switching to grams, calculate per-gram values
-    if (newUnit === 'g') {
-      const originalServingG = food.serving_size_g || parseFloat(food.serving_size)
+    if (newUnit === "g") {
+      const originalServingG = food.serving_size_g || Number.parseFloat(food.serving_size)
       const perGram = {
         calories: food.calories / originalServingG,
         carbs: food.carbs / originalServingG,
@@ -224,7 +287,7 @@ export function AddFood({ meal }: AddFoodProps) {
     }
 
     // For other units, maintain the ratio with original serving size
-    const ratio = newServingSizeNum / parseFloat(food.serving_size)
+    const ratio = newServingSizeNum / Number.parseFloat(food.serving_size)
     return {
       ...food,
       unit: newUnit,
@@ -238,31 +301,93 @@ export function AddFood({ meal }: AddFoodProps) {
 
   // Add these to the expanded confirmation section
   const handleUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    if (!selectedFood) return
-    const newFood = updateNutritionalValues(selectedFood, e.target.value, selectedFood.serving_size)
-    setSelectedFood(newFood)
+    if (!selectedFood || !selectedFood.perGramValues) return
+
+    const newUnit = e.target.value
+    const currentServingSize = parseFloat(selectedFood.serving_size || "0")
+    
+    // Convert current serving size to grams, then to the new unit
+    const currentGrams = convertToGrams(currentServingSize, selectedFood.unit)
+    const newServingSize = convertFromGrams(currentGrams, newUnit)
+
+    // Update the food with the new unit and converted serving size
+    const updatedFood = {
+      ...selectedFood,
+      unit: newUnit,
+      serving_size: String(Number(newServingSize.toFixed(2))), // Round to 2 decimal places
+      serving_size_g: currentGrams, // Keep the gram weight the same
+      // All nutritional values stay the same since the actual weight hasn't changed
+    }
+
+    setSelectedFood(updatedFood)
   }
 
   const handleServingSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!selectedFood) return;
-    
-    const value = e.target.value;
-    // Allow empty string or valid numbers
-    setSelectedFood({
+    if (!selectedFood || !selectedFood.perGramValues) return
+
+    const newServingSize = e.target.value
+    const newServingSizeNum = parseFloat(newServingSize || "0")
+
+    if (isNaN(newServingSizeNum) || newServingSizeNum <= 0) {
+      setSelectedFood({
+        ...selectedFood,
+        serving_size: "0",
+        serving_size_g: 0,
+        calories: 0,
+        carbs: 0,
+        fats: 0,
+        protein: 0,
+        sugar: 0,
+        fiber: 0,
+        vitamin_a: 0,
+        vitamin_c: 0,
+        calcium: 0,
+        iron: 0,
+        magnesium: 0,
+        phosphorus: 0,
+        potassium: 0,
+        sodium: 0
+      })
+      return
+    }
+
+    // Convert the serving size to grams based on the current unit
+    const servingSizeInGrams = convertToGrams(newServingSizeNum, selectedFood.unit)
+
+    // Calculate new values based on per-gram values
+    const { perGramValues } = selectedFood
+    const updatedFood = {
       ...selectedFood,
-      serving_size: value
-    });
+      serving_size: String(newServingSizeNum),
+      serving_size_g: servingSizeInGrams,
+      calories: Math.round(perGramValues.calories * servingSizeInGrams),
+      carbs: Math.round(perGramValues.carbs * servingSizeInGrams),
+      fats: Math.round(perGramValues.fats * servingSizeInGrams),
+      protein: Math.round(perGramValues.protein * servingSizeInGrams),
+      sugar: Math.round(perGramValues.sugar * servingSizeInGrams),
+      fiber: Math.round(perGramValues.fiber * servingSizeInGrams),
+      vitamin_a: Math.round(perGramValues.vitamin_a * servingSizeInGrams),
+      vitamin_c: Math.round(perGramValues.vitamin_c * servingSizeInGrams),
+      calcium: Math.round(perGramValues.calcium * servingSizeInGrams),
+      iron: Math.round(perGramValues.iron * servingSizeInGrams),
+      magnesium: Math.round(perGramValues.magnesium * servingSizeInGrams),
+      phosphorus: Math.round(perGramValues.phosphorus * servingSizeInGrams),
+      potassium: Math.round(perGramValues.potassium * servingSizeInGrams),
+      sodium: Math.round(perGramValues.sodium * servingSizeInGrams)
+    }
+
+    setSelectedFood(updatedFood)
   }
 
   // New: Function to confirm and save the selected food entry
   const confirmSave = async () => {
-    if (!selectedFood) return;
+    if (!selectedFood) return
     try {
       setLoading(true)
-      const response = await fetch('/api/macro-calculator', {
-        method: 'POST',
+      const response = await fetch("/api/macro-calculator", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           ...selectedFood,
@@ -271,7 +396,7 @@ export function AddFood({ meal }: AddFoodProps) {
         }),
       })
       if (!response.ok) {
-        throw new Error('Failed to save food entry')
+        throw new Error("Failed to save food entry")
       }
       alert(`Food saved: ${selectedFood.foodName}`)
       setSelectedFood(null)
@@ -284,23 +409,19 @@ export function AddFood({ meal }: AddFoodProps) {
   }
 
   const toggleNutrition = () => {
-    setShowNutrition(prev => !prev);
-  };
+    setShowNutrition((prev) => !prev)
+  }
 
   return (
     <Card className="w-full">
       <CardHeader className="border-b">
-        <h2 className="text-xl md:text-2xl font-bold">
-          Add Food To {meal.charAt(0).toUpperCase() + meal.slice(1)}
-        </h2>
+        <h2 className="text-xl md:text-2xl font-bold">Add Food To {meal.charAt(0).toUpperCase() + meal.slice(1)}</h2>
       </CardHeader>
       <CardContent className="p-4 md:p-6">
         <div className="space-y-6">
           {/* Search Section */}
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-muted-foreground">
-              Search the food database by name
-            </h3>
+            <h3 className="text-sm font-medium text-muted-foreground">Search the food database by name</h3>
             <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-2">
               <Input
                 type="text"
@@ -311,11 +432,7 @@ export function AddFood({ meal }: AddFoodProps) {
               />
               <Button type="submit">Search</Button>
             </form>
-            <Link 
-              href="#" 
-              onClick={handleQuickAddCalories}
-              className="text-sm text-blue-500 hover:underline"
-            >
+            <Link href="#" onClick={handleQuickAddCalories} className="text-sm text-blue-500 hover:underline">
               Quick add calories
             </Link>
           </div>
@@ -337,41 +454,40 @@ export function AddFood({ meal }: AddFoodProps) {
               <h4 className="text-lg font-semibold">Search Results</h4>
               <ul className="space-y-2">
                 {searchResults.map((product) => (
-                  <li
-                    key={product.code}
-                    className="border rounded-lg overflow-hidden"
-                  >
+                  <li key={product.code} className="border rounded-lg overflow-hidden">
                     <div className="p-4 flex justify-between items-center">
                       <div>
-                        <p className="font-bold">{product.product_name || "Unnamed Product"}</p>
-                        <p className="text-sm">
-                          Calories: {product.nutriments["energy-kcal_100g"] || "N/A"}
+                        <p className="font-bold">{product.brands || "No listed brand"}</p>
+                        <p className="">
+                          {product.product_name || product.abbreviated_product_name || "No Product Name"}
                         </p>
+                        <p className="text-sm">Calories: {product.nutriments["energy-kcal_100g"] || "N/A"}</p>
                       </div>
-                      <Button 
+                      <Button
                         onClick={() => handleAddSearchResult(product)}
                         variant={expandedItemId === product.code ? "secondary" : "default"}
                       >
-                        Add
+                        {expandedItemId === product.code ? "Close" : "Details"}
                       </Button>
                     </div>
 
                     {/* Confirmation section that expands/collapses */}
                     {expandedItemId === product.code && selectedFood && (
                       <div className="p-4 bg-muted/50 border-t">
-                        <div className="space-y-2">
+                        <div className="space-y-4">
                           <h3 className="font-semibold">Confirm Food Entry</h3>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
+                          
+                          {/* Serving size controls */}
+                          <div className="flex gap-2">
+                            <div className="flex-1">
                               <Label>Serving Size</Label>
                               <Input
                                 type="number"
                                 value={selectedFood.serving_size}
                                 onChange={handleServingSizeChange}
-                                placeholder="0"
                               />
                             </div>
-                            <div className="space-y-2">
+                            <div className="flex-1">
                               <Label>Unit</Label>
                               <select
                                 className="w-full p-2 border rounded-md"
@@ -379,21 +495,35 @@ export function AddFood({ meal }: AddFoodProps) {
                                 onChange={handleUnitChange}
                               >
                                 <option value="g">grams (g)</option>
-                                <option value="serving">serving</option>
                                 <option value="oz">ounces (oz)</option>
+                                <option value="tbsp">tablespoons (tbsp)</option>
+                                <option value="tsp">teaspoons (tsp)</option>
+                                <option value="cup">cups</option>
                               </select>
                             </div>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              <p><strong>Brand:</strong> {selectedFood.brands}</p>
-                              <p><strong>Calories:</strong> {selectedFood.calories}</p>
-                              <p><strong>Carbs:</strong> {selectedFood.carbs}g</p>
-                              <p><strong>Fats:</strong> {selectedFood.fats}g</p>
-                              <p><strong>Protein:</strong> {selectedFood.protein}g</p>
-                            </div>
+                          </div>
+
+                          {/* Rest of the confirmation section */}
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <p>
+                              <strong>Brand:</strong> {selectedFood.brands}
+                            </p>
+                            <p>
+                              <strong>Calories:</strong> {selectedFood.calories}
+                            </p>
+                            <p>
+                              <strong>Carbs:</strong> {selectedFood.carbs}g
+                            </p>
+                            <p>
+                              <strong>Fats:</strong> {selectedFood.fats}g
+                            </p>
+                            <p>
+                              <strong>Protein:</strong> {selectedFood.protein}g
+                            </p>
                           </div>
                           <div className="flex gap-2 mt-4">
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               onClick={() => {
                                 confirmSave()
                                 setExpandedItemId(null)
@@ -401,9 +531,9 @@ export function AddFood({ meal }: AddFoodProps) {
                             >
                               Confirm
                             </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
+                            <Button
+                              size="sm"
+                              variant="outline"
                               onClick={() => {
                                 setExpandedItemId(null)
                                 setSelectedFood(null)
@@ -424,9 +554,7 @@ export function AddFood({ meal }: AddFoodProps) {
           {/* Recent Foods Section */}
           <div className="space-y-4">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
-              <h3 className="text-lg font-semibold">
-                Or, add from your recent foods:
-              </h3>
+              <h3 className="text-lg font-semibold">Or, add from your recent foods:</h3>
               <div className="flex gap-2 overflow-x-auto whitespace-nowrap">
                 <Button variant="outline" size="sm">
                   Recent
@@ -450,9 +578,7 @@ export function AddFood({ meal }: AddFoodProps) {
             {loading && (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <span className="ml-2 text-sm text-muted-foreground">
-                  Loading recent foods...
-                </span>
+                <span className="ml-2 text-sm text-muted-foreground">Loading recent foods...</span>
               </div>
             )}
 
@@ -491,7 +617,9 @@ export function AddFood({ meal }: AddFoodProps) {
                           <TableCell className="text-right">{food.carbs}</TableCell>
                           <TableCell className="text-right">{food.fats}</TableCell>
                           <TableCell className="text-right">{food.protein}</TableCell>
-                          <TableCell>{food.serving_size} {food.unit}</TableCell>
+                          <TableCell>
+                            {food.serving_size} {food.unit}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -539,4 +667,4 @@ export function AddFood({ meal }: AddFoodProps) {
       </CardContent>
     </Card>
   )
-} 
+}

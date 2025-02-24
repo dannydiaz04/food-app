@@ -289,7 +289,7 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
   const TableHeaderContent = () => (
     <TableRow className="bg-muted/70 dark:bg-muted/30 hover:bg-muted/70 dark:hover:bg-muted/30">
       <TableHead className="w-[140px] sm:w-[300px] font-semibold text-primary">Food</TableHead>
-      <TableHead className="text-right font-semibold text-primary">Cal</TableHead>
+      <TableHead className="text-right font-semibold text-primary text-sm sm:text-base">Calories</TableHead> 
       <TableHead className="text-right hidden xs:table-cell font-semibold text-primary">Carbs</TableHead>
       <TableHead className="text-right hidden xs:table-cell font-semibold text-primary">Fat</TableHead>
       <TableHead className="text-right hidden xs:table-cell font-semibold text-primary">Protein</TableHead>
@@ -425,9 +425,9 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
                               className="border-b border-border/50 transition-colors bg-background hover:bg-accent/50 dark:bg-muted/5 dark:hover:bg-accent/20"
                             >
                               <TableCell className="w-[140px] sm:w-[300px] font-medium text-foreground/90">
-                                <div className="truncate max-w-[120px] sm:max-w-none">{entry.foodName}</div>
+                                <div className="whitespace-normal text-sm sm:text-base">{entry.foodName}</div>
                               </TableCell>
-                              <TableCell className="text-right tabular-nums text-foreground/80">{entry.calories}</TableCell>
+                              <TableCell className="text-right tabular-nums text-foreground/80 text-sm sm:text-base whitespace-normal">{entry.calories}</TableCell>
                               <TableCell className="text-right hidden xs:table-cell tabular-nums text-foreground/80">{entry.carbs}</TableCell>
                               <TableCell className="text-right hidden xs:table-cell tabular-nums text-foreground/80">{entry.fats}</TableCell>
                               <TableCell className="text-right hidden xs:table-cell tabular-nums text-foreground/80">{entry.protein}</TableCell>

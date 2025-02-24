@@ -40,10 +40,11 @@ export function Dashboard({ totals, goals, remaining }: DashboardProps) {
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-semibold">Today</h1>
           </div>
-          <div className="text-right">
-            <span className="text-2xl font-bold">1</span>
+          {/* TODO: Add day streak counter*/}
+          {/* <div className="text-right">
+            <span className="text-2xl font-bold">{totals.calories > 0 ? 1 : 0}</span>
             <span className="text-sm text-muted-foreground block">DAY STREAK</span>
-          </div>
+          </div> */}
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -63,22 +64,18 @@ export function Dashboard({ totals, goals, remaining }: DashboardProps) {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Base Goal</span>
-                  <span className="font-medium">{goals.calories}</span>
-                </div>
-                <div className="flex items-center justify-between">
                   <span className="text-sm flex items-center gap-2">
                     <Utensils className="w-4 h-4" />
                     Food
                   </span>
-                  <span className="font-medium">{totals.calories}</span>
+                  <span className="text-sm">{totals.calories}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm flex items-center gap-2">
                     <Flame className="w-4 h-4" />
                     Exercise
                   </span>
-                  <span className="font-medium">0</span>
+                  <span className="text-sm ml-4">0</span>
                 </div>
               </div>
             </CardContent>

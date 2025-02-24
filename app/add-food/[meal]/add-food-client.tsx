@@ -178,7 +178,7 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
   }
 
   const confirmSave = async () => {
-    if (!scannedProduct || !currentDate) return;
+    if (!scannedProduct || !currentDate) return
     try {
       setIsLoading(true)
       const response = await fetch('/api/macro-calculator', {
@@ -274,4 +274,4 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
       <AddFood meal={meal} />
     </div>
   )
-} 
+}

@@ -15,6 +15,7 @@ interface FoodProduct {
   product_name: string
   brands: string
   serving_size: string
+  serving_size_unit: string
   nutriments: {
     "energy-kcal_100g"?: number
     carbohydrates_100g?: number
@@ -235,4 +236,4 @@ export function DatabaseSearch() {
       </CardContent>
     </Card>
   )
-} 
+}
