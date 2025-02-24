@@ -123,21 +123,20 @@ export function DatabaseSearch() {
         <CardTitle>Food Database Search</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSearch} className="flex gap-2 mb-6">
+        <form onSubmit={handleSearch} className="flex gap-2 justify-center mb-4">
           <Input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search for foods..."
-            className="flex-1"
+            placeholder="Search for food products..."
+            className="max-w-sm"
           />
           <Button type="submit" disabled={isLoading}>
             {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Search className="h-4 w-4 mr-2" />
+              <Search className="h-4 w-4" />
             )}
-            Search
           </Button>
         </form>
 
@@ -164,35 +163,25 @@ export function DatabaseSearch() {
               {searchResults.map((product) => (
                 <React.Fragment key={product.code}>
                   <TableRow key={product.code}>
-                    <TableCell className="font-medium">{product.product_name}</TableCell>
+                    <TableCell>{product.product_name}</TableCell>
                     <TableCell>{product.brands}</TableCell>
-                    <TableCell className="text-right">
-                      {Math.round(product.nutriments["energy-kcal_100g"] || 0)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {Math.round(product.nutriments.carbohydrates_100g || 0)}g
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {Math.round(product.nutriments.fat_100g || 0)}g
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {Math.round(product.nutriments.proteins_100g || 0)}g
-                    </TableCell>
+                    <TableCell className="text-right">{Math.round(product.nutriments["energy-kcal_100g"] || 0)}</TableCell>
+                    <TableCell className="text-right">{Math.round(product.nutriments.carbohydrates_100g || 0)}g</TableCell>
+                    <TableCell className="text-right">{Math.round(product.nutriments.fat_100g || 0)}g</TableCell>
+                    <TableCell className="text-right">{Math.round(product.nutriments.proteins_100g || 0)}g</TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button
                         size="sm"
-                        variant="ghost"
-                        onClick={() => handleAddFood(product)}
-                        className="h-8 w-8 p-0"
+                        variant="outline"
+                        onClick={() => setSelectedFoodId(selectedFoodId === product.code ? null : product.code)}
                       >
-                        <Plus className="h-4 w-4" />
+                        Details
                       </Button>
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={() => toggleNutrition(product.code)}
+                        onClick={() => handleAddFood(product)}
                       >
-                        {selectedFoodId === product.code ? "Hide Nutrition" : "View Nutrition"}
+                        <Plus className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -229,7 +218,11 @@ export function DatabaseSearch() {
         </div>
 
         <div className="flex justify-center mt-4">
-          <Button onClick={loadMoreResults} disabled={isLoading || !hasSearched}>
+          <Button 
+            onClick={loadMoreResults} 
+            disabled={isLoading || !hasSearched}
+            className="w-full max-w-sm"
+          >
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Load More"}
           </Button>
         </div>

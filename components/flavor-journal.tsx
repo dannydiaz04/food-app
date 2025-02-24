@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Alert, AlertDescription, AlertVariantProps } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
+import { MealEntry } from "@/components/meal-entry"
 
 interface NutritionData {
   calories: number
@@ -73,6 +74,8 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
   const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [editEntry, setEditEntry] = useState<EditFoodEntry | null>(null)
+  const [showMealEntry, setShowMealEntry] = useState(false)
+  const [selectedFood, setSelectedFood] = useState<NutritionData | null>(null)
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -298,6 +301,42 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
       <TableHead className="text-right w-[80px] font-semibold text-primary">Actions</TableHead>
     </TableRow>
   )
+
+  const confirmSave = async () => {
+    if (!selectedFood) return
+    try {
+      setLoading(true)
+      const response = await fetch("/api/macro-calculator", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...selectedFood,
+          meal,
+          date: new Date().toISOString(),
+        }),
+      })
+      if (!response.ok) {
+        throw new Error("Failed to save food entry")
+      }
+      setShowMealEntry(false)
+      setSelectedFood(null)
+      router.refresh()
+    } catch (err) {
+      console.error("Error saving food entry:", err)
+      alert("Failed to save food entry")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddSearchResult = (product: OpenFoodProduct) => {
+    // ... existing code to process the product ...
+    
+    setSelectedFood(foodData)
+    setShowMealEntry(true) // Show the MealEntry dialog instead of expanding the row
+  }
 
   return (
     <>
@@ -547,6 +586,13 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <MealEntry
+        isOpen={showMealEntry}
+        onClose={() => setShowMealEntry(false)}
+        onConfirm={confirmSave}
+        selectedFood={selectedFood}
+      />
     </>
   )
 }
