@@ -16,51 +16,65 @@ import { FoodItem } from "@/types/food"
 interface MealEntryProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: () => void
+  onConfirm: (updatedFood: FoodItem) => Promise<void>
   selectedFood: FoodItem | null
 }
 
 export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntryProps) {
   const [isSaving, setIsSaving] = useState(false)
-  const [servingSize, setServingSize] = useState(selectedFood?.serving_size || "")
-  const [unit, setUnit] = useState(selectedFood?.unit || "")
-  const [calories, setCalories] = useState(selectedFood?.calories || 0)
-  const [carbs, setCarbs] = useState(selectedFood?.carbs || 0)
-  const [fats, setFats] = useState(selectedFood?.fats || 0)
-  const [protein, setProtein] = useState(selectedFood?.protein || 0)
+  const [servingSize, setServingSize] = useState("")
+  const [unit, setUnit] = useState("g")
+  const [calories, setCalories] = useState(0)
+  const [carbs, setCarbs] = useState(0)
+  const [fats, setFats] = useState(0)
+  const [protein, setProtein] = useState(0)
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [showMicronutrients, setShowMicronutrients] = useState(false)
 
   useEffect(() => {
-    if (selectedFood) {
-      setServingSize(selectedFood.serving_size)
-      setUnit(selectedFood.unit)
-      
-      const servingSizeNumber = parseFloat(selectedFood.serving_size)
-      if (!isNaN(servingSizeNumber)) {
-        const ratio = servingSizeNumber / 100
-        setCalories(Math.round(selectedFood.perGramValues.calories * ratio * 100))
-        setCarbs(Math.round(selectedFood.perGramValues.carbs * ratio * 100) / 10)
-        setFats(Math.round(selectedFood.perGramValues.fats * ratio * 100) / 10)
-        setProtein(Math.round(selectedFood.perGramValues.protein * ratio * 100) / 10)
-      }
+    if (selectedFood && selectedFood.perGramValues) {
+      // Initialize with the serving size in grams
+      const servingSizeInGrams = selectedFood.serving_size_g || 100
+      setServingSize(String(servingSizeInGrams))
+      setUnit("g") // Always start with grams
+
+      // Calculate initial values based on per gram values
+      setCalories(Math.round(selectedFood.perGramValues.calories * servingSizeInGrams))
+      setCarbs(Math.round(selectedFood.perGramValues.carbs * servingSizeInGrams * 10) / 10)
+      setFats(Math.round(selectedFood.perGramValues.fats * servingSizeInGrams * 10) / 10)
+      setProtein(Math.round(selectedFood.perGramValues.protein * servingSizeInGrams * 10) / 10)
     }
   }, [selectedFood])
 
   const adjustMacros = (newServingSize: string, newUnit: string) => {
-    const originalServingSize = parseFloat(selectedFood?.serving_size) || 1
-    const originalCalories = selectedFood?.calories || 0
-    const originalCarbs = selectedFood?.carbs || 0
-    const originalFats = selectedFood?.fats || 0
-    const originalProtein = selectedFood?.protein || 0
+    if (!selectedFood?.perGramValues) return
 
-    const newServingSizeValue = parseFloat(newServingSize) || 0
-    const adjustmentFactor = newServingSizeValue / originalServingSize
+    // Convert the new serving size to grams
+    const newServingSizeNum = parseFloat(newServingSize) || 0
+    let servingSizeInGrams: number
 
-    setCalories(Math.round(originalCalories * adjustmentFactor))
-    setCarbs(Math.round(originalCarbs * adjustmentFactor * 10) / 10)
-    setFats(Math.round(originalFats * adjustmentFactor * 10) / 10)
-    setProtein(Math.round(originalProtein * adjustmentFactor * 10) / 10)
+    switch (newUnit) {
+      case "oz":
+        servingSizeInGrams = newServingSizeNum * 28.3495
+        break
+      case "cup":
+        servingSizeInGrams = newServingSizeNum * 236.588
+        break
+      case "tbsp":
+        servingSizeInGrams = newServingSizeNum * 14.7868
+        break
+      case "tsp":
+        servingSizeInGrams = newServingSizeNum * 4.92892
+        break
+      default: // grams
+        servingSizeInGrams = newServingSizeNum
+    }
+
+    // Update all macros based on the per gram values
+    setCalories(Math.round(selectedFood.perGramValues.calories * servingSizeInGrams))
+    setCarbs(Math.round(selectedFood.perGramValues.carbs * servingSizeInGrams * 10) / 10)
+    setFats(Math.round(selectedFood.perGramValues.fats * servingSizeInGrams * 10) / 10)
+    setProtein(Math.round(selectedFood.perGramValues.protein * servingSizeInGrams * 10) / 10)
   }
 
   const handleServingSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,7 +92,21 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
   const handleConfirm = async () => {
     setIsSaving(true)
     try {
-      await onConfirm()
+      // Create updated food object with current values
+      if (!selectedFood) return;
+      
+      const updatedFood: FoodItem = {
+        ...selectedFood,
+        serving_size: servingSize,
+        serving_size_g: parseFloat(servingSize),
+        unit,
+        calories,
+        carbs,
+        fats,
+        protein
+      };
+
+      await onConfirm(updatedFood)
       setShowConfirmation(true)
       onClose()
     } catch (error) {

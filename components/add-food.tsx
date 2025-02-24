@@ -133,10 +133,11 @@ export function AddFood({ meal }: AddFoodProps) {
       setExpandedItemId(null)
       setSelectedFood(null)
     } else {
-      const nutriments = product.nutriments || {}
+      const nutriments = product.nutriments_estimated || {}
 
+      // Calculate per gram values by dividing by 100 (since values are per 100g)
       const perGram = {
-        calories: (nutriments["energy-kcal_100g"] || 0) / 100,
+        calories: (nutriments["energy_100g"] || 0) / 100,
         carbs: (nutriments["carbohydrates_100g"] || 0) / 100,
         fats: (nutriments["fat_100g"] || 0) / 100,
         protein: (nutriments["proteins_100g"] || 0) / 100,
@@ -152,35 +153,56 @@ export function AddFood({ meal }: AddFoodProps) {
         sodium: (nutriments["sodium_100g"] || 0) / 100,
       }
 
-      const servingSizeG = 100
-      const serving_quantity = product.product_quantity || null
-      const serving_quantity_unit = product.product_quantity_unit || null
+      // Extract serving size in grams from the imported serving size
+      let serving_size_g = 100 // default to 100g
+      if (product.serving_size_imported) {
+        // Try to extract the gram value from strings like "1/2 cup (48 g)"
+        const match = String(product.serving_size_imported).match(/\((\d+)\s*g\)/)
+        if (match) {
+          serving_size_g = parseInt(match[1])
+        }
+      }
+
+      console.log('Raw nutriments from API:', nutriments)
+      console.log(`Serving size in grams: ${serving_size_g}g`)
+      console.log('Per gram values:', perGram)
+
+      // Calculate values based on the serving size
+      const calculatedValues = {
+        calories: Math.round(perGram.calories * serving_size_g),
+        carbs: Math.round(perGram.carbs * serving_size_g * 10) / 10,
+        fats: Math.round(perGram.fats * serving_size_g * 10) / 10,
+        protein: Math.round(perGram.protein * serving_size_g * 10) / 10,
+        sugar: Math.round(perGram.sugar * serving_size_g * 10) / 10,
+        fiber: Math.round(perGram.fiber * serving_size_g * 10) / 10,
+        vitamin_a: Math.round(perGram.vitamin_a * serving_size_g * 10) / 10,
+        vitamin_c: Math.round(perGram.vitamin_c * serving_size_g * 10) / 10,
+        calcium: Math.round(perGram.calcium * serving_size_g * 10) / 10,
+        iron: Math.round(perGram.iron * serving_size_g * 10) / 10,
+        magnesium: Math.round(perGram.magnesium * serving_size_g * 10) / 10,
+        phosphorus: Math.round(perGram.phosphorus * serving_size_g * 10) / 10,
+        potassium: Math.round(perGram.potassium * serving_size_g * 10) / 10,
+        sodium: Math.round(perGram.sodium * serving_size_g * 10) / 10,
+      }
+
+      console.log('Calculated values for current serving size:', calculatedValues)
 
       const foodData: FoodItem = {
         food_ky: product.code,
         foodName: product.product_name || "Unknown Food",
         brands: product.brands || "Unknown Brand",
-        unit: "g",
-        serving_size: String(servingSizeG),
-        serving_size_g: servingSizeG,
-        serving_quantity: serving_quantity || 100,
-        serving_quantity_unit: serving_quantity_unit || "g",
+        unit: "g", // Start with grams
+        serving_size: serving_size_g,
+        serving_size_g: serving_size_g,
+        serving_size_imported: product.serving_size_imported,
+        product_quantity_unit: product.product_quantity_unit || "g",
+        serving_quantity: product.serving_quantity || serving_size_g,
+        serving_quantity_unit: product.product_quantity_unit || "g",
         perGramValues: perGram,
-        calories: Math.round(perGram.calories * servingSizeG),
-        carbs: Math.round(perGram.carbs * servingSizeG),
-        fats: Math.round(perGram.fats * servingSizeG),
-        protein: Math.round(perGram.protein * servingSizeG),
-        sugar: Math.round(perGram.sugar * servingSizeG),
-        fiber: Math.round(perGram.fiber * servingSizeG),
-        vitamin_a: Math.round(perGram.vitamin_a * servingSizeG),
-        vitamin_c: Math.round(perGram.vitamin_c * servingSizeG),
-        calcium: Math.round(perGram.calcium * servingSizeG),
-        iron: Math.round(perGram.iron * servingSizeG),
-        magnesium: Math.round(perGram.magnesium * servingSizeG),
-        phosphorus: Math.round(perGram.phosphorus * servingSizeG),
-        potassium: Math.round(perGram.potassium * servingSizeG),
-        sodium: Math.round(perGram.sodium * servingSizeG),
+        ...calculatedValues // Spread the calculated values
       }
+
+      console.log('Final food data:', foodData)
 
       setSelectedFood(foodData)
       setExpandedItemId(product.code)
@@ -272,8 +294,7 @@ export function AddFood({ meal }: AddFoodProps) {
     setExpandedItemId(null)
   }
 
-  const handleMealEntryConfirm = async () => {
-    if (!selectedFood) return
+  const handleMealEntryConfirm = async (updatedFood: FoodItem) => {
     try {
       const response = await fetch("/api/macro-calculator", {
         method: "POST",
@@ -281,7 +302,7 @@ export function AddFood({ meal }: AddFoodProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...selectedFood,
+          ...updatedFood,
           meal,
           date: new Date().toISOString(),
         }),

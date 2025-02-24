@@ -3,22 +3,40 @@ export interface FoodItem {
   foodName: string
   brands: string
   unit: string
-  serving_size: string
-  serving_size_g?: number
-  perGramValues?: {
+  serving_size: string | number
+  serving_size_g: number
+  serving_size_imported: string | number | null
+  product_quantity_unit: string
+  perGramValues: {
     calories: number
     carbs: number
     fats: number
     protein: number
-    // ... other nutritional values
+    sugar: number
+    fiber: number
+    vitamin_a: number
+    vitamin_c: number
+    calcium: number
+    iron: number
+    magnesium: number
+    phosphorus: number
+    potassium: number
+    sodium: number
   }
-  serving_quantity: string | number
-  serving_quantity_unit: string
   calories: number
   carbs: number
   fats: number
   protein: number
-  // ... other properties
+  sugar: number
+  fiber: number
+  vitamin_a: number
+  vitamin_c: number
+  calcium: number
+  iron: number
+  magnesium: number
+  phosphorus: number
+  potassium: number
+  sodium: number
 }
 
 export interface OpenFoodProduct {
@@ -27,11 +45,14 @@ export interface OpenFoodProduct {
   product_name: string
   brands: string
   serving_quantity: string | number
-  serving_quantity_unit: string
-  product_quantity: string | number
   product_quantity_unit: string
+  serving_size_imported: string | number
+  serving_size_unit: string
   serving_size?: string
   nutriments: {
+    [key: string]: number
+  }
+  nutriments_estimated: {
     [key: string]: number
   }
 }
