@@ -11,11 +11,14 @@ import { RecentFoods } from "./food/RecentFoods"
 import { MealEntry } from "@/components/meal-entry"
 import { LabelScanner } from "@/components/label-scanner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Search, Calculator, Camera, Barcode } from "lucide-react"
+import { Search, Calculator, Camera, Barcode, Image, AlignLeft } from "lucide-react"
 import type { FoodItem, OpenFoodProduct } from "@/types/food"
 import { convertToGrams, convertFromGrams } from "@/utils/unit-conversion"
 import { MacroCalculator } from "./macro-calculator"
 import BarcodeScanner from "@/components/barcode-scanner"
+import Tooltip from "@/components/ui/Tooltip"
+import { FoodImageScanner } from "./food-image-scanner"
+import { TextPromptEntry } from "./food/TextPromptEntry"
 
 interface AddFoodProps {
   meal: string
@@ -97,7 +100,7 @@ export function AddFood({ meal }: AddFoodProps) {
       console.log("OpenFoodFacts full response:", data)
 
       if (data && data.products) {
-        data.products.forEach((product: any, index: number) => {
+        data.products.forEach((product: OpenFoodProduct, index: number) => {
           console.log(`Product ${index} details:`, product)
         })
         setSearchResults(data.products)
@@ -370,28 +373,58 @@ export function AddFood({ meal }: AddFoodProps) {
             value={activeTab}
             onValueChange={handleTabChange}
           >
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="search" className="flex items-center gap-2">
-                <Search className="w-4 h-4" />
-                <span className="hidden sm:inline">Search</span>
-              </TabsTrigger>
-              <TabsTrigger value="scan" className="flex items-center gap-2">
-                <Camera className="w-4 h-4" />
-                <span className="hidden sm:inline">Scan Label</span>
-              </TabsTrigger>
-              <TabsTrigger value="barcode" className="flex items-center gap-2">
-                <Barcode className="w-4 h-4" />
-                <span className="hidden sm:inline">Barcode</span>
-              </TabsTrigger>
-              <TabsTrigger value="calculator" className="flex items-center gap-2">
-                <Calculator className="w-4 h-4" />
-                <span className="hidden sm:inline">Calculator</span>
-              </TabsTrigger>
+            <TabsList className="grid w-full grid-cols-6">
+              <Tooltip text="Search for food items">
+                <TabsTrigger value="search" className="flex items-center justify-center gap-2">
+                  <Search className="w-4 h-4" />
+                  <span className="hidden sm:inline">Search</span>
+                </TabsTrigger>
+              </Tooltip>
+              <Tooltip text="Describe your food in text">
+                <TabsTrigger value="text" className="flex items-center justify-center gap-2">
+                  <AlignLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">Text</span>
+                </TabsTrigger>
+              </Tooltip>
+              <Tooltip text="Scan a nutrition label">
+                <TabsTrigger value="scan" className="flex items-center justify-center gap-2">
+                  <Camera className="w-4 h-4" />
+                  <span className="hidden sm:inline">Label</span>
+                </TabsTrigger>
+              </Tooltip>
+              <Tooltip text="Take a photo of food">
+                <TabsTrigger value="food-photo" className="flex items-center justify-center gap-2">
+                  <Image className="w-4 h-4" />
+                  <span className="hidden sm:inline">Food</span>
+                </TabsTrigger>
+              </Tooltip>
+              <Tooltip text="Scan a barcode">
+                <TabsTrigger value="barcode" className="flex items-center justify-center gap-2">
+                  <Barcode className="w-4 h-4" />
+                  <span className="hidden sm:inline">Barcode</span>
+                </TabsTrigger>
+              </Tooltip>
+              <Tooltip text="Calculate macros manually">
+                <TabsTrigger value="calculator" className="flex items-center justify-center gap-2">
+                  <Calculator className="w-4 h-4" />
+                  <span className="hidden sm:inline">Calc</span>
+                </TabsTrigger>
+              </Tooltip>
             </TabsList>
             
             <TabsContent value="calculator" className="space-y-4">
               <MacroCalculator meal={meal} />
             </TabsContent>
+            
+            <TabsContent value="text" className="space-y-4">
+              <TextPromptEntry 
+                onFoodAnalyzed={(foodItem) => {
+                  setSelectedFood(foodItem)
+                  setShowMealEntry(true)
+                }}
+              />
+            </TabsContent>
+            
             <TabsContent value="search" className="space-y-4">
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-6">
@@ -425,10 +458,10 @@ export function AddFood({ meal }: AddFoodProps) {
                     loading={loading}
                     error={error}
                     foods={recentFoods}
-                    onSort={(sortBy) => {
+                    onSort={(_sortBy) => {
                       // Add your sort logic here
                     }}
-                    onCheckFood={(foodKy) => {
+                    onCheckFood={(_foodKy) => {
                       // Add your check food logic here
                     }}
                   />
@@ -456,11 +489,8 @@ export function AddFood({ meal }: AddFoodProps) {
               )}
             </TabsContent>
 
-            <TabsContent value="calculator" className="space-y-4">
-              {/* Add your calculator content here */}
-              <div className="text-center text-muted-foreground">
-                Quick add calories and macros manually
-              </div>
+            <TabsContent value="food-photo" className="space-y-4">
+              <FoodImageScanner />
             </TabsContent>
           </Tabs>
         </CardContent>
