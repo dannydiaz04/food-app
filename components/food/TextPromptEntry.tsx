@@ -47,8 +47,6 @@ export function TextPromptEntry({ onFoodAnalyzed }: TextPromptEntryProps) {
         serving_size_g: foodData.serving_size || 100,
         serving_size_imported: foodData.serving_size,
         product_quantity_unit: "g",
-        serving_quantity: foodData.serving_size || 100,
-        serving_quantity_unit: "g",
         perGramValues: {
           calories: (foodData.calories || 0) / (foodData.serving_size || 100),
           carbs: (foodData.carbs || 0) / (foodData.serving_size || 100),
@@ -138,8 +136,8 @@ export function TextPromptEntry({ onFoodAnalyzed }: TextPromptEntryProps) {
         <div className="text-sm text-muted-foreground">
           <h4 className="font-medium">Tips for best results:</h4>
           <ul className="list-disc pl-5 space-y-1 mt-1">
-            <li>Include quantities when possible (e.g., "2 eggs" instead of just "eggs")</li>
-            <li>Specify cooking methods (e.g., "grilled chicken" vs "fried chicken")</li>
+            <li>Include quantities when possible (e.g., &quot;2 eggs&quot; instead of just &quot;eggs&quot;)</li>
+            <li>Specify cooking methods (e.g., &quot;grilled chicken&quot; vs &quot;fried chicken&quot;)</li>
             <li>Mention brands for packaged foods if known</li>
             <li>List all ingredients for homemade dishes</li>
           </ul>
