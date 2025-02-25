@@ -371,7 +371,8 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      {/* Removed the Scan Barcode button */}
+      {/* <div className="flex justify-end">
         <Button 
           onClick={toggleScanner}
           variant="outline"
@@ -380,7 +381,7 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
           <Scan className="w-4 h-4" />
           {showScanner ? 'Hide Scanner' : 'Scan Barcode'}
         </Button>
-      </div>
+      </div> */}
 
       {/* Loading state */}
       {isLoading && (
@@ -438,6 +439,24 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
         onConfirm={handleMealEntryConfirm}
         selectedFood={selectedFood}
       />
+
+      {/* Keep only the 'Add' button */}
+      <div className="flex justify-end">
+        <Button 
+          onClick={handleMealEntryConfirm}
+          variant="primary"
+        >
+          Add
+        </Button>
+        {/* Removed the Macro Calculator button */}
+        {/* <Button 
+          onClick={handleQuickAddCalories}
+          variant="outline"
+          className="ml-2"
+        >
+          Go to Macro Calculator
+        </Button> */}
+      </div>
     </div>
   )
 }

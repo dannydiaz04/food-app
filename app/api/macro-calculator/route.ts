@@ -73,6 +73,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Also save to food_info table to grow the database
+    try {
+      // Check if this food already exists in the food_info table
+      const { data: existingFood } = await supabase
+        .from('food_info')
+        .select('id')
+        .eq('foodName', body.foodName)
+        .limit(1);
+
+      // If food doesn't exist yet, add it to the food_info table
+      if (!existingFood || existingFood.length === 0) {
+        await supabase
+          .from('food_info')
+          .insert({
+            user_id: userData.id,
+            foodName: body.foodName,
+            brand: body.brands || null,
+            serving_size: parseFloat(body.serving_size?.toString() || "0"),
+            serving_unit: body.unit,
+            calories: body.calories || autoCalculatedCalories,
+            protein: body.protein || 0,
+            carbs: body.carbs || 0,
+            fat: body.fats || 0,
+            fiber: body.fiber || 0,
+            sugar: body.sugar || 0,
+            sodium: body.sodium || 0,
+            potassium: body.potassium || 0,
+            calcium: body.calcium || 0,
+            iron: body.iron || 0,
+            vitamin_a: body.vitamin_a || 0,
+            vitamin_c: body.vitamin_c || 0,
+            magnesium: body.magnesium || 0,
+            phosphorus: body.phosphorus || 0,
+            created_at: new Date(),
+            updated_at: new Date(),
+          });
+      }
+    } catch (foodInfoError) {
+      // Log the error but don't fail the main operation
+      console.error("Failed to save to food_info table:", foodInfoError);
+    }
+
     return NextResponse.json({ message: "Food entry added successfully!" });
   } catch (error: any) {
     console.error("Failed to add food entry:", error);

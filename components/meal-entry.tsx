@@ -115,6 +115,22 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
         protein
       }
 
+      // Save to food_info table
+      try {
+        await fetch('/api/save-food', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatedFood),
+        });
+        // We don't need to wait for the response or handle errors
+        // as this is a background operation
+      } catch (error) {
+        console.error('Error saving to food database:', error);
+        // Don't interrupt the main flow if this fails
+      }
+
       await onConfirm(updatedFood)
       setShowConfirmation(true)
     } catch (error) {

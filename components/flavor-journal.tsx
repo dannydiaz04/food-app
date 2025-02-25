@@ -370,52 +370,15 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className="text-primary flex-1 xs:flex-none hover:bg-primary/10 h-8"
+                      className="text-primary flex-1 xs:flex-none hover:bg-primary/10 hover:shadow-md transition-shadow duration-200 h-8"
                       asChild
                     >
                       <Link href={`/add-food/${section.name.toLowerCase()}?date=${currentDate?.toISOString() || ''}`}>
                         <Plus className="h-4 w-4 mr-1" />
                         <span className="hidden xs:inline">Add Food</span>
-                        <span className="xs:hidden">Add</span>
+                        <span className="xs:hidden">Add Food</span>
                       </Link>
                     </Button>
-                    <div className="relative flex-1 xs:flex-none" ref={(el) => {
-                      if (el) {
-                        dropdownRefs.current[section.name] = el;
-                      }
-                    }}>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-primary"
-                        onClick={() => handleQuickToolsClick(section.name)}
-                      >
-                        <Settings2 className="h-4 w-4 mr-1" />
-                      </Button>
-                      {dropdownOpen === section.name && (
-                        <>
-                          {console.log("Rendering dropdown for section:", section.name)}
-                          <div className="absolute right-0 mt-1 w-48 bg-popover border rounded-md shadow-lg z-50">
-                            <button
-                              className="w-full px-4 py-2 text-sm text-left hover:bg-accent hover:text-accent-foreground"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                console.log("Macro Calculator button clicked");
-                                console.log("Section:", section.name);
-                                console.log("Event target:", e.currentTarget);
-                                console.log("Dropdown state when clicked:", dropdownOpen);
-                                console.log("Current section.name:", section.name);
-                                console.log("Are they equal?:", dropdownOpen === section.name);
-                                handleMacroCalculatorClick(section.name);
-                              }}
-                            >
-                              Macro Calculator
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
                   </div>
                 </div>
                 <div className="overflow-x-auto rounded-md border bg-card shadow-sm">

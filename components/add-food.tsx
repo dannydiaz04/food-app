@@ -19,6 +19,7 @@ import BarcodeScanner from "@/components/barcode-scanner"
 import Tooltip from "@/components/ui/Tooltip"
 import { FoodImageScanner } from "./food-image-scanner"
 import { TextPromptEntry } from "./food/TextPromptEntry"
+import { Button } from "@/components/ui/button"
 
 interface AddFoodProps {
   meal: string
@@ -39,8 +40,17 @@ export function AddFood({ meal }: AddFoodProps) {
   const [hasSearched, setHasSearched] = useState(false)
   const [showMealEntry, setShowMealEntry] = useState(false)
   const [activeTab, setActiveTab] = useState("search")
-  const barcodeScannerRef = useRef<{ stopCamera?: () => void }>({})
+  const barcodeScannerRef = useRef<{ stopCamera: () => void } | null>(null)
   const router = useRouter()
+
+  // Add this effect to stop the camera when the active tab changes
+  useEffect(() => {
+    // If we're not on the barcode tab and we have a reference to the scanner
+    if (activeTab !== "barcode" && barcodeScannerRef.current) {
+      // Stop the camera
+      barcodeScannerRef.current.stopCamera()
+    }
+  }, [activeTab])
 
   const fetchRecentFoods = async () => {
     try {
@@ -493,6 +503,15 @@ export function AddFood({ meal }: AddFoodProps) {
               <FoodImageScanner />
             </TabsContent>
           </Tabs>
+
+          <div className="flex justify-end">
+            <Button 
+              onClick={handleConfirm}
+              variant="primary"
+            >
+              Add Food
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
