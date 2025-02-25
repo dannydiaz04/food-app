@@ -20,6 +20,13 @@ interface SearchResultsProps {
   searchLoading: boolean
 }
 
+// Define colors for macros
+const macroColors = {
+  carbs: "text-emerald-500", // Replace with actual color class
+  protein: "text-amber-500", // Replace with actual color class
+  fats: "text-purple-500", // Replace with actual color class
+};
+
 export function SearchResults({
   results,
   expandedItemId,
@@ -103,19 +110,20 @@ export function SearchResults({
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-                    <div className="p-2 bg-muted rounded">Calories: {selectedFood.calories}</div>
-                    <div className="p-2 bg-muted rounded">Protein: {selectedFood.protein}g</div>
-                    <div className="p-2 bg-muted rounded">Carbs: {selectedFood.carbs}g</div>
-                    <div className="p-2 bg-muted rounded">Fat: {selectedFood.fats}g</div>
+                    <div>Calories: {selectedFood.calories}</div>
+                    <div>Protein: <span className={macroColors.protein}>{selectedFood.protein}g</span></div>
+                    <div>Carbs: <span className={macroColors.carbs}>{selectedFood.carbs}g</span></div>
+                    <div>Fat: <span className={macroColors.fats}>{selectedFood.fats}g</span></div>
                   </div>
 
                   <div className="flex flex-col sm:flex-row justify-end gap-2">
+                    <Button onClick={onConfirm} className="w-full sm:w-auto">
+                      Edit & Add
+                    </Button>
                     <Button variant="outline" onClick={onCancel} className="w-full sm:w-auto">
                       Cancel
                     </Button>
-                    <Button onClick={onConfirm} className="w-full sm:w-auto">
-                      Add to Meal
-                    </Button>
+
                   </div>
                 </div>
               )}

@@ -26,7 +26,7 @@ export function AuthHeader() {
           onClick={handleLogoClick}
           className="text-green-400 hover:text-green-300 text-xl font-bold ml-2"
         >
-          Flavor Journal
+          Flavor <div className="text-green-400">Journal</div>
         </Link>
         <ThemeToggle />
       </div>

@@ -159,7 +159,7 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
   async function handleBarcodeDetected(barcode: string) {
     try {
       setIsLoading(true);
-      console.log('Processing barcode:', barcode); // Debug log
+      console.log('Processing barcode:', barcode);
 
       const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
       console.log('API Response status:', response.status); // Debug log
@@ -274,6 +274,12 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
       setShowMealEntry(true)
       setShowScanner(false)
       setScanError(null)
+      
+      // Update the URL without the barcode parameter to allow normal navigation
+      const url = new URL(window.location.href);
+      url.searchParams.delete('barcode');
+      window.history.replaceState({}, '', url.toString());
+      
     } catch (error) {
       console.error("Error processing barcode:", error);
       console.error("Full error details:", {

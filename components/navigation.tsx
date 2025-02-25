@@ -14,6 +14,7 @@ export function Navigation() {
     { href: "/flavor-journal", label: "Flavor Journal" },
     { href: "/database", label: "Database" },
     { href: "/settings", label: "Settings" },
+    { href: "/scan-label", label: "Scan Label" },
   ]
 
   return (

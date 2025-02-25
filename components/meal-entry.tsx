@@ -20,6 +20,13 @@ interface MealEntryProps {
   selectedFood: FoodItem | null
 }
 
+// Define colors for macros
+const macroColors = {
+  carbs: "text-emerald-500", // Replace with actual color class
+  protein: "text-amber-500", // Replace with actual color class
+  fats: "text-purple-500", // Replace with actual color class
+};
+
 export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntryProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [servingSize, setServingSize] = useState("")
@@ -43,6 +50,9 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
       setCarbs(Math.round(selectedFood.perGramValues.carbs * servingSizeInGrams * 10) / 10)
       setFats(Math.round(selectedFood.perGramValues.fats * servingSizeInGrams * 10) / 10)
       setProtein(Math.round(selectedFood.perGramValues.protein * servingSizeInGrams * 10) / 10)
+      
+      // Reset confirmation state
+      setShowConfirmation(false)
     }
   }, [selectedFood])
 
@@ -90,11 +100,10 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
   }
 
   const handleConfirm = async () => {
+    if (!selectedFood) return
+    
     setIsSaving(true)
     try {
-      // Create updated food object with current values
-      if (!selectedFood) return;
-      
       const updatedFood: FoodItem = {
         ...selectedFood,
         serving_size: servingSize,
@@ -104,11 +113,10 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
         carbs,
         fats,
         protein
-      };
+      }
 
       await onConfirm(updatedFood)
       setShowConfirmation(true)
-      onClose()
     } catch (error) {
       console.error('Error saving meal entry:', error)
     } finally {
@@ -116,11 +124,24 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
     }
   }
 
+  const handleConfirmationClose = () => {
+    setShowConfirmation(false)
+    onClose()
+  }
+
+  // If the main dialog is closed but not through the confirmation flow,
+  // make sure to reset the confirmation state
+  const handleMainDialogClose = (open: boolean) => {
+    if (!open && !showConfirmation) {
+      onClose()
+    }
+  }
+
   if (!selectedFood) return null
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen && !showConfirmation} onOpenChange={handleMainDialogClose}>
         <DialogContent className="max-w-[325px] w-full sm:max-w-[325px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Meal Entry</DialogTitle>
@@ -167,9 +188,9 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
                 <Label className="text-sm font-medium">Macronutrients</Label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                   <div>Calories: {calories}</div>
-                  <div>Carbs: {carbs}g</div>
-                  <div>Fats: {fats}g</div>
-                  <div>Protein: {protein}g</div>
+                  <div>Carbs: <span className={macroColors.carbs}>{carbs}g</span></div>
+                  <div>Fats: <span className={macroColors.fats}>{fats}g</span></div>
+                  <div>Protein: <span className={macroColors.protein}>{protein}g</span></div>
                   {selectedFood.sugar !== undefined && <div>Sugar: {selectedFood.sugar}g</div>}
                   {selectedFood.fiber !== undefined && <div>Fiber: {selectedFood.fiber}g</div>}
                 </div>
@@ -222,15 +243,22 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
         </DialogContent>
       </Dialog>
 
-      {/* Confirmation Dialog */}
-      <Dialog open={showConfirmation} onOpenChange={() => setShowConfirmation(false)}>
-        <DialogContent className="max-w-[275px] w-full sm:max-w-[275px]">
+      {/* Confirmation Dialog - Separate from the main dialog */}
+      <Dialog open={showConfirmation} onOpenChange={handleConfirmationClose}>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Confirmation</DialogTitle>
+            <DialogTitle>Success!</DialogTitle>
           </DialogHeader>
-          <p>Your food has been saved to your meal and flavor journal!</p>
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => setShowConfirmation(false)}>OK</Button>
+          <div className="py-4">
+            <p>Your food has been saved to your meal and flavor journal!</p>
+          </div>
+          <div className="flex justify-end">
+            <Button 
+              onClick={handleConfirmationClose}
+              className="w-full sm:w-auto"
+            >
+              OK
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

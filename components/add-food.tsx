@@ -2,15 +2,20 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
 import { SearchForm } from "./food/SearchForm"
 import { SearchResults } from "./food/SearchResults"
 import { RecentFoods } from "./food/RecentFoods"
 import { MealEntry } from "@/components/meal-entry"
+import { LabelScanner } from "@/components/label-scanner"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Search, Calculator, Camera, Barcode } from "lucide-react"
 import type { FoodItem, OpenFoodProduct } from "@/types/food"
 import { convertToGrams, convertFromGrams } from "@/utils/unit-conversion"
+import { MacroCalculator } from "./macro-calculator"
+import BarcodeScanner from "@/components/barcode-scanner"
 
 interface AddFoodProps {
   meal: string
@@ -30,38 +35,40 @@ export function AddFood({ meal }: AddFoodProps) {
   const [page, setPage] = useState(1)
   const [hasSearched, setHasSearched] = useState(false)
   const [showMealEntry, setShowMealEntry] = useState(false)
+  const [activeTab, setActiveTab] = useState("search")
+  const barcodeScannerRef = useRef<{ stopCamera?: () => void }>({})
   const router = useRouter()
 
-  useEffect(() => {
-    const fetchRecentFoods = async () => {
-      try {
-        setLoading(true)
-        setError(null)
+  const fetchRecentFoods = async () => {
+    try {
+      setLoading(true)
+      setError(null)
 
-        const response = await fetch("/api/recent-foods", {
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        })
+      const response = await fetch("/api/recent-foods", {
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
 
-        const data = await response.json()
-        console.log("Fetched food data:", data)
+      const data = await response.json()
+      console.log("Fetched food data:", data)
 
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to fetch recent foods")
-        }
-
-        setRecentFoods(data)
-      } catch (err) {
-        console.error("Error fetching recent foods:", err)
-        setError(err instanceof Error ? err.message : "An unexpected error occurred")
-        setRecentFoods([])
-      } finally {
-        setLoading(false)
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch recent foods")
       }
-    }
 
+      setRecentFoods(data)
+    } catch (err) {
+      console.error("Error fetching recent foods:", err)
+      setError(err instanceof Error ? err.message : "An unexpected error occurred")
+      setRecentFoods([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
     fetchRecentFoods()
   }, [])
 
@@ -310,6 +317,19 @@ export function AddFood({ meal }: AddFoodProps) {
       if (!response.ok) {
         throw new Error("Failed to save food entry")
       }
+      
+      // Reset the search state after successful save
+      setSelectedFood(null)
+      setExpandedItemId(null)
+      setShowMealEntry(false)
+      
+      // Clear the search query and results (optional)
+      setSearchQuery("")
+      setSearchResults([])
+      setHasSearched(false)
+      
+      // Refresh recent foods list
+      fetchRecentFoods()
     } catch (err) {
       console.error("Error saving food entry:", err)
       throw err
@@ -320,6 +340,23 @@ export function AddFood({ meal }: AddFoodProps) {
     setShowNutrition((prev) => !prev)
   }
 
+  // Handle tab change
+  const handleTabChange = (value: string) => {
+    // If navigating away from barcode tab, stop the camera
+    if (activeTab === "barcode" && value !== "barcode") {
+      if (barcodeScannerRef.current?.stopCamera) {
+        barcodeScannerRef.current.stopCamera()
+      }
+    }
+    
+    setActiveTab(value)
+    
+    // Handle navigation to calculator
+    if (value === "calculator") {
+      router.push(`/add-food/macro-calculator?meal=${meal.toLowerCase()}`)
+    }
+  }
+
   return (
     <div className="w-full max-w-screen-xl mx-auto p-4">
       <Card className="w-full overflow-hidden">
@@ -327,47 +364,105 @@ export function AddFood({ meal }: AddFoodProps) {
           <h2 className="text-xl md:text-2xl font-bold">Add Food To {meal.charAt(0).toUpperCase() + meal.slice(1)}</h2>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-6">
-              <div className="md:sticky top-0 bg-background pt-4 pb-2 -mx-4 px-4 z-10">
-                <SearchForm
-                  searchQuery={searchQuery}
-                  onSearchChange={setSearchQuery}
-                  onSearch={handleSearch}
-                  onQuickAdd={handleQuickAddCalories}
-                  isLoading={searchLoading}
-                />
+          <Tabs 
+            defaultValue="search" 
+            className="space-y-4"
+            value={activeTab}
+            onValueChange={handleTabChange}
+          >
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="search" className="flex items-center gap-2">
+                <Search className="w-4 h-4" />
+                <span className="hidden sm:inline">Search</span>
+              </TabsTrigger>
+              <TabsTrigger value="scan" className="flex items-center gap-2">
+                <Camera className="w-4 h-4" />
+                <span className="hidden sm:inline">Scan Label</span>
+              </TabsTrigger>
+              <TabsTrigger value="barcode" className="flex items-center gap-2">
+                <Barcode className="w-4 h-4" />
+                <span className="hidden sm:inline">Barcode</span>
+              </TabsTrigger>
+              <TabsTrigger value="calculator" className="flex items-center gap-2">
+                <Calculator className="w-4 h-4" />
+                <span className="hidden sm:inline">Calculator</span>
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="calculator" className="space-y-4">
+              <MacroCalculator meal={meal} />
+            </TabsContent>
+            <TabsContent value="search" className="space-y-4">
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-6">
+                  <div className="md:sticky top-0 bg-background pt-4 pb-2 -mx-4 px-4 z-10">
+                    <SearchForm
+                      searchQuery={searchQuery}
+                      onSearchChange={setSearchQuery}
+                      onSearch={handleSearch}
+                      onQuickAdd={handleQuickAddCalories}
+                      isLoading={searchLoading}
+                    />
+                  </div>
+                  <SearchResults
+                    results={searchResults}
+                    expandedItemId={expandedItemId}
+                    selectedFood={selectedFood}
+                    onResultClick={handleAddSearchResult}
+                    onServingSizeChange={handleServingSizeChange}
+                    onUnitChange={handleUnitChange}
+                    onConfirm={handleConfirm}
+                    onCancel={() => {
+                      setExpandedItemId(null)
+                      setSelectedFood(null)
+                    }}
+                    onLoadMore={loadMore}
+                    searchLoading={searchLoading}
+                  />
+                </div>
+                <div className="space-y-6">
+                  <RecentFoods
+                    loading={loading}
+                    error={error}
+                    foods={recentFoods}
+                    onSort={(sortBy) => {
+                      // Add your sort logic here
+                    }}
+                    onCheckFood={(foodKy) => {
+                      // Add your check food logic here
+                    }}
+                  />
+                </div>
               </div>
-              <SearchResults
-                results={searchResults}
-                expandedItemId={expandedItemId}
-                selectedFood={selectedFood}
-                onResultClick={handleAddSearchResult}
-                onServingSizeChange={handleServingSizeChange}
-                onUnitChange={handleUnitChange}
-                onConfirm={handleConfirm}
-                onCancel={() => {
-                  setExpandedItemId(null)
-                  setSelectedFood(null)
-                }}
-                onLoadMore={loadMore}
-                searchLoading={searchLoading}
-              />
-            </div>
-            <div className="space-y-6">
-              <RecentFoods
-                loading={loading}
-                error={error}
-                foods={recentFoods}
-                onSort={(sortBy) => {
-                  // Add your sort logic here
-                }}
-                onCheckFood={(foodKy) => {
-                  // Add your check food logic here
-                }}
-              />
-            </div>
-          </div>
+            </TabsContent>
+
+            <TabsContent value="scan" className="space-y-4">
+              <LabelScanner />
+            </TabsContent>
+
+            <TabsContent value="barcode" className="space-y-4">
+              {activeTab === "barcode" && (
+                <BarcodeScanner 
+                  ref={barcodeScannerRef}
+                  onDetected={(barcode) => {
+                    // Redirect to the current meal with the barcode parameter
+                    router.push(`/add-food/${meal}?barcode=${barcode}`)
+                  }}
+                  onError={(error) => {
+                    console.error("Barcode scanner error:", error)
+                    setError("Failed to scan barcode: " + error.message)
+                  }}
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="calculator" className="space-y-4">
+              {/* Add your calculator content here */}
+              <div className="text-center text-muted-foreground">
+                Quick add calories and macros manually
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
