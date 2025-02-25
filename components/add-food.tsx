@@ -229,23 +229,24 @@ export function AddFood({ meal }: AddFoodProps) {
     }
   }
 
-  const handleUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    if (!selectedFood || !selectedFood.perGramValues) return
+  const handleUnitChange = (value: string) => {
+    if (!selectedFood) return
 
-    const newUnit = e.target.value
-    const currentServingSize = Number.parseFloat(selectedFood.serving_size || "0")
+    const newUnit = value
+    const currentServingSize = Number.parseFloat(String(selectedFood.serving_size) || "0")
 
     const currentGrams = convertToGrams(currentServingSize, selectedFood.unit)
     const newServingSize = convertFromGrams(currentGrams, newUnit)
 
-    const updatedFood = {
+    setSelectedFood({
       ...selectedFood,
       unit: newUnit,
-      serving_size: String(Number(newServingSize.toFixed(2))),
-      serving_size_g: currentGrams,
-    }
-
-    setSelectedFood(updatedFood)
+      serving_size: newServingSize.toFixed(1),
+      calories: Math.round(selectedFood.perGramValues.calories * currentGrams),
+      carbs: Math.round(selectedFood.perGramValues.carbs * currentGrams * 10) / 10,
+      fats: Math.round(selectedFood.perGramValues.fats * currentGrams * 10) / 10,
+      protein: Math.round(selectedFood.perGramValues.protein * currentGrams * 10) / 10,
+    })
   }
 
   const handleServingSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -495,6 +496,10 @@ export function AddFood({ meal }: AddFoodProps) {
                     console.error("Barcode scanner error:", error)
                     setError("Failed to scan barcode: " + error.message)
                   }}
+                  onClose={() => {
+                    // Add this to properly handle closing the scanner
+                    setActiveTab("search") // Change tab to exit barcode view
+                  }}
                 />
               )}
             </TabsContent>
@@ -507,7 +512,7 @@ export function AddFood({ meal }: AddFoodProps) {
           <div className="flex justify-end">
             <Button 
               onClick={handleConfirm}
-              variant="primary"
+              variant="default"
             >
               Add Food
             </Button>

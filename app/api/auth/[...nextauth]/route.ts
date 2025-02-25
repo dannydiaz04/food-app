@@ -1,14 +1,23 @@
-import NextAuth from "next-auth";
+import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { createClient } from "@supabase/supabase-js";
+import { JWT } from "next-auth/jwt";
+import { Session } from "next-auth";
 
 // 1. Initialize your Supabase client using the service role key
 const supabaseUrl = process.env.SUPABASE_URL as string;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-export const authOptions = {
+// Define types for user and session
+interface User {
+  id: string;
+  email: string;
+  [key: string]: any;
+}
+
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -112,7 +121,7 @@ export const authOptions = {
   },
 
   callbacks: {
-    async jwt({ token, user }: { token: any, user: any }) {
+    async jwt({ token, user }: { token: JWT, user?: User }) {
       // If user object exists, it means a successful sign-in or sign-up
       if (user) {
         token.id = user.id;
@@ -121,10 +130,10 @@ export const authOptions = {
       return token;
     },
 
-    async session({ session, token }: { session: any, token: any }) {
+    async session({ session, token }: { session: Session, token: JWT }) {
       // Pass user ID (and/or other info) to the client in session
       if (session.user) {
-        session.user.id = token.id;
+        session.user.id = token.id as string;
       }
       return session;
     },

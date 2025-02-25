@@ -7,6 +7,8 @@ export interface FoodItem {
   serving_size_g: number
   serving_size_imported: string | number | null
   product_quantity_unit: string
+  serving_quantity: number
+  serving_quantity_unit: string
   perGramValues: {
     calories: number
     carbs: number

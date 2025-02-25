@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import type { FoodItem } from "@/types/food"
+import { Camera, X } from "lucide-react"
 
 interface TextPromptEntryProps {
   onFoodAnalyzed: (food: FoodItem) => void
@@ -14,6 +15,8 @@ export function TextPromptEntry({ onFoodAnalyzed }: TextPromptEntryProps) {
   const [text, setText] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showCamera, setShowCamera] = useState(false)
+  const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,13 +50,15 @@ export function TextPromptEntry({ onFoodAnalyzed }: TextPromptEntryProps) {
         serving_size_g: foodData.serving_size || 100,
         serving_size_imported: foodData.serving_size,
         product_quantity_unit: "g",
+        serving_quantity: foodData.serving_size || 100,
+        serving_quantity_unit: "g",
         perGramValues: {
-          calories: (foodData.calories || 0) / (foodData.serving_size || 100),
-          carbs: (foodData.carbs || 0) / (foodData.serving_size || 100),
-          fats: (foodData.fats || 0) / (foodData.serving_size || 100),
-          protein: (foodData.protein || 0) / (foodData.serving_size || 100),
-          sugar: (foodData.sugar || 0) / (foodData.serving_size || 100),
-          fiber: (foodData.fiber || 0) / (foodData.serving_size || 100),
+          calories: (foodData.calories || 0) / 100,
+          carbs: (foodData.carbs || 0) / 100,
+          fats: (foodData.fats || 0) / 100,
+          protein: (foodData.protein || 0) / 100,
+          sugar: (foodData.sugar || 0) / 100,
+          fiber: (foodData.fiber || 0) / 100,
           vitamin_a: 0,
           vitamin_c: 0,
           calcium: 0,
@@ -87,6 +92,27 @@ export function TextPromptEntry({ onFoodAnalyzed }: TextPromptEntryProps) {
     } finally {
       setIsProcessing(false)
     }
+  }
+
+  const captureImage = () => {
+    if (!videoRef) return;
+    
+    const video = videoRef as unknown as HTMLVideoElement;
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(video, 0, 0);
+    const imageDataUrl = canvas.toDataURL('image/jpeg');
+    
+    // Process the image or send it to your API
+    console.log("Image captured:", imageDataUrl);
+    
+    // Close the camera
+    setShowCamera(false);
   }
 
   return (
@@ -142,6 +168,35 @@ export function TextPromptEntry({ onFoodAnalyzed }: TextPromptEntryProps) {
             <li>List all ingredients for homemade dishes</li>
           </ul>
         </div>
+
+        {showCamera && (
+          <div className="fixed inset-0 z-50 bg-black">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              className="h-full w-full object-cover"
+            />
+            
+            <div className="absolute bottom-10 left-0 right-0 flex justify-center">
+              <Button
+                onClick={captureImage}
+                size="lg"
+                className="rounded-full h-16 w-16 flex items-center justify-center"
+              >
+                <Camera className="h-8 w-8" />
+              </Button>
+            </div>
+            
+            <Button
+              onClick={() => setShowCamera(false)}
+              variant="ghost"
+              className="absolute top-4 right-4 text-white"
+            >
+              <X className="h-6 w-6" />
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

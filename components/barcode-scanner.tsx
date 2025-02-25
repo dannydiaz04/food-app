@@ -2,14 +2,17 @@
 
 import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '@zxing/library';
+import { Button } from "@/components/ui/button"
+import { X } from "lucide-react"
 
 interface BarcodeScannerProps {
   onDetected: (barcode: string) => void;
   onError: (error: Error) => void;
+  onClose?: () => void;
 }
 
 const BarcodeScanner = forwardRef<{ stopCamera: () => void }, BarcodeScannerProps>(
-  ({ onDetected, onError }, ref) => {
+  ({ onDetected, onError, onClose }, ref) => {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const [isClient, setIsClient] = useState(false);
     const streamRef = useRef<MediaStream | null>(null);
@@ -32,11 +35,10 @@ const BarcodeScanner = forwardRef<{ stopCamera: () => void }, BarcodeScannerProp
     // Expose the stopCamera method to parent components
     useImperativeHandle(ref, () => ({
       stopCamera: () => {
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach(track => track.stop());
-          streamRef.current = null;
+        stopCamera();
+        if (onClose) {
+          onClose();
         }
-        codeReader.current.reset();
       }
     }));
 
@@ -46,9 +48,7 @@ const BarcodeScanner = forwardRef<{ stopCamera: () => void }, BarcodeScannerProp
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
-      if (codeReader.current) {
-        codeReader.current.reset();
-      }
+      codeReader.current.reset();
     };
 
     useEffect(() => {
@@ -105,15 +105,23 @@ const BarcodeScanner = forwardRef<{ stopCamera: () => void }, BarcodeScannerProp
       };
     }, [isClient, onDetected, onError]);
 
+    // Handle the close button click
+    const handleClose = () => {
+      stopCamera();
+      if (onClose) {
+        onClose();
+      }
+    };
+
     if (!isClient) {
       return null;
     }
 
     return (
-      <div className="relative w-full max-w-[640px] aspect-[4/3] mx-auto overflow-hidden">
+      <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center">
         <video
           ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover"
+          className="h-full w-full object-cover"
           playsInline
           muted
           autoPlay
@@ -126,6 +134,14 @@ const BarcodeScanner = forwardRef<{ stopCamera: () => void }, BarcodeScannerProp
           <div className="absolute bottom-[15%] left-[15%] w-[30px] h-[30px] border-l-[3px] border-b-[3px] border-red-500/70" />
           <div className="absolute bottom-[15%] right-[15%] w-[30px] h-[30px] border-r-[3px] border-b-[3px] border-red-500/70" />
         </div>
+        
+        <Button
+          onClick={handleClose}
+          variant="ghost"
+          className="absolute top-4 right-4 text-white"
+        >
+          <X className="h-6 w-6" />
+        </Button>
       </div>
     );
   }

@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Camera, RotateCcw, Loader2 } from "lucide-react"
+import { Camera, RotateCcw, Loader2, X } from "lucide-react"
 import { MealEntry } from "@/components/meal-entry"
 import type { FoodItem } from "@/types/food"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -23,17 +23,36 @@ export function FoodImageScanner() {
   const [showConfirmation, setShowConfirmation] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const [cameraActive, setCameraActive] = useState(false)
+
+  useEffect(() => {
+    if (cameraActive && videoRef.current && videoRef.current.srcObject) {
+      videoRef.current.play().catch(err => {
+        console.error("Error playing video:", err)
+        setError("Could not start camera feed")
+      })
+    }
+  }, [cameraActive])
 
   const startCamera = async () => {
     try {
+      setCameraActive(true)
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: 'environment' } 
       })
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         streamRef.current = stream
+        
+        try {
+          await videoRef.current.play()
+        } catch (playError) {
+          console.error("Error playing video:", playError)
+        }
       }
     } catch (err) {
+      setCameraActive(false)
       setError('Failed to access camera')
       console.error(err)
     }
@@ -47,6 +66,7 @@ export function FoodImageScanner() {
     if (videoRef.current) {
       videoRef.current.srcObject = null
     }
+    setCameraActive(false)
   }
 
   const captureImage = () => {
@@ -62,6 +82,13 @@ export function FoodImageScanner() {
     const imageDataUrl = canvas.toDataURL('image/jpeg')
     setImage(imageDataUrl)
     stopCamera()
+  }
+
+  const resetCamera = () => {
+    setImage(null)
+    setError(null)
+    setIsProcessing(false)
+    startCamera()
   }
 
   const processImage = async () => {
@@ -145,12 +172,6 @@ export function FoodImageScanner() {
     }
   }
 
-  const resetCamera = () => {
-    setImage(null)
-    setError(null)
-    startCamera()
-  }
-
   const handleMealEntryClose = () => {
     setShowMealEntry(false)
     setScannedFood(null)
@@ -190,46 +211,65 @@ export function FoodImageScanner() {
   }
 
   return (
-    <Card className="max-w-md mx-auto">
-      <CardContent className="p-6 space-y-4">
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+    <div className="relative">
+      {!cameraActive && !image && (
+        <div className="flex flex-col items-center justify-center p-4">
+          <Button onClick={startCamera} className="mb-2">
+            <Camera className="mr-2 h-4 w-4" /> Open Camera
+          </Button>
+          <p className="text-sm text-muted-foreground text-center">
+            Take a photo of your food
+          </p>
+        </div>
+      )}
 
-        {!image ? (
-          <div className="relative aspect-[4/3] bg-black rounded-lg overflow-hidden">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              className="absolute inset-0 w-full h-full object-cover"
-              onLoadedMetadata={() => {}}
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Button
-                onClick={startCamera}
-                className="bg-white/10 hover:bg-white/20"
-              >
-                <Camera className="w-6 h-6" />
-                <span className="ml-2">Start Camera</span>
-              </Button>
+      {cameraActive && (
+        <div className="fixed inset-0 z-50 bg-black">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            className="h-full w-full object-cover"
+          />
+          
+          <div className="absolute bottom-10 left-0 right-0 flex justify-center">
+            <Button
+              onClick={captureImage}
+              size="lg"
+              className="rounded-full h-16 w-16 flex items-center justify-center"
+            >
+              <Camera className="h-8 w-8" />
+            </Button>
+          </div>
+          
+          <Button
+            onClick={stopCamera}
+            variant="ghost"
+            className="absolute top-4 right-4 text-white"
+          >
+            <X className="h-6 w-6" />
+          </Button>
+        </div>
+      )}
+
+      {image && (
+        <Card className="max-w-md mx-auto">
+          <CardContent className="p-6 space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="relative aspect-[4/3] bg-black rounded-lg overflow-hidden">
+              <img
+                src={image}
+                alt="Captured food"
+                className="absolute inset-0 w-full h-full object-contain"
+              />
             </div>
-          </div>
-        ) : (
-          <div className="relative aspect-[4/3] bg-black rounded-lg overflow-hidden">
-            <img
-              src={image}
-              alt="Captured food"
-              className="absolute inset-0 w-full h-full object-contain"
-            />
-          </div>
-        )}
 
-        <div className="flex justify-between gap-4">
-          {image ? (
-            <>
+            <div className="flex justify-between gap-4">
               <Button
                 variant="outline"
                 onClick={resetCamera}
@@ -251,17 +291,10 @@ export function FoodImageScanner() {
                   'Analyze Food'
                 )}
               </Button>
-            </>
-          ) : (
-            <Button
-              onClick={captureImage}
-              className="w-full"
-            >
-              Capture Image
-            </Button>
-          )}
-        </div>
-      </CardContent>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <MealEntry
         isOpen={showMealEntry}
@@ -289,6 +322,6 @@ export function FoodImageScanner() {
           </div>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   )
 } 

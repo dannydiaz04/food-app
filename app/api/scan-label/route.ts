@@ -36,6 +36,10 @@ export async function POST(request: NextRequest) {
       model: "gpt-4o",
       messages: [
         {
+          role: "system",
+          content: "You are a nutrition label analyzer. Extract information from nutrition labels and return it in clean JSON format without markdown formatting, code blocks, or any additional text."
+        },
+        {
           role: "user",
           content: [
             {
@@ -54,9 +58,40 @@ export async function POST(request: NextRequest) {
       max_tokens: 1000,
     });
 
-    const nutritionData = JSON.parse(response.choices[0].message.content || "{}");
-
-    return NextResponse.json(nutritionData);
+    // Get the content from the response
+    const content = response.choices[0].message.content || "{}";
+    
+    // Clean up the content to handle markdown formatting
+    let cleanedContent = content;
+    
+    // Check if the content is wrapped in markdown code blocks
+    if (content.includes("```json")) {
+      // Extract the JSON part from the markdown
+      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch && jsonMatch[1]) {
+        cleanedContent = jsonMatch[1].trim();
+      }
+    } else if (content.includes("```")) {
+      // Handle case where code block doesn't specify language
+      const jsonMatch = content.match(/```\s*([\s\S]*?)\s*```/);
+      if (jsonMatch && jsonMatch[1]) {
+        cleanedContent = jsonMatch[1].trim();
+      }
+    }
+    
+    try {
+      // Parse the cleaned JSON
+      const nutritionData = JSON.parse(cleanedContent);
+      return NextResponse.json(nutritionData);
+    } catch (parseError) {
+      console.error("Error parsing JSON:", parseError);
+      console.error("Content received:", content);
+      console.error("Cleaned content:", cleanedContent);
+      return NextResponse.json(
+        { error: "Failed to parse nutrition data" },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error("Error processing image:", error);
     return NextResponse.json(

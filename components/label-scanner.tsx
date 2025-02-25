@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Camera, RotateCcw, Loader2 } from "lucide-react"
+import { Camera, RotateCcw, Loader2, X } from "lucide-react"
 import { MealEntry } from "@/components/meal-entry"
 import type { FoodItem } from "@/types/food"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -23,17 +23,36 @@ export function LabelScanner() {
   const [showConfirmation, setShowConfirmation] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const [cameraActive, setCameraActive] = useState(false)
+
+  useEffect(() => {
+    if (cameraActive && videoRef.current && videoRef.current.srcObject) {
+      videoRef.current.play().catch(err => {
+        console.error("Error playing video:", err)
+        setError("Could not start camera feed")
+      })
+    }
+  }, [cameraActive])
 
   const startCamera = async () => {
     try {
+      setCameraActive(true)
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: 'environment' } 
       })
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         streamRef.current = stream
+        
+        try {
+          await videoRef.current.play()
+        } catch (playError) {
+          console.error("Error playing video:", playError)
+        }
       }
     } catch (err) {
+      setCameraActive(false)
       setError('Failed to access camera')
       console.error(err)
     }
@@ -47,6 +66,7 @@ export function LabelScanner() {
     if (videoRef.current) {
       videoRef.current.srcObject = null
     }
+    setCameraActive(false)
   }
 
   const captureImage = () => {
@@ -62,6 +82,13 @@ export function LabelScanner() {
     const imageDataUrl = canvas.toDataURL('image/jpeg')
     setImage(imageDataUrl)
     stopCamera()
+  }
+
+  const resetCamera = () => {
+    setImage(null)
+    setError(null)
+    setIsProcessing(false)
+    startCamera()
   }
 
   const processImage = async () => {
@@ -101,6 +128,8 @@ export function LabelScanner() {
         serving_size_g: nutritionData.serving_size || 100,
         serving_size_imported: nutritionData.serving_size,
         product_quantity_unit: nutritionData.serving_size_unit || "g",
+        serving_quantity: nutritionData.serving_size || 100,
+        serving_quantity_unit: nutritionData.serving_size_unit || "g",
         perGramValues: {
           calories: (nutritionData.calories || 0) / 100,
           carbs: (nutritionData.total_carbohydrates || 0) / 100,
@@ -135,30 +164,26 @@ export function LabelScanner() {
 
       setScannedFood(foodItem)
       setShowMealEntry(true)
+      setIsProcessing(false)
     } catch (err) {
-      setError('Failed to process image')
-      console.error(err)
-    } finally {
+      console.error("Error processing image:", err)
+      setError('Failed to process image. Please try again.')
       setIsProcessing(false)
     }
-  }
-
-  const resetCamera = () => {
-    setImage(null)
-    setError(null)
-    startCamera()
   }
 
   const handleMealEntryClose = () => {
     setShowMealEntry(false)
     setScannedFood(null)
-    resetCamera()
   }
 
   const handleMealEntryConfirm = async (updatedFood: FoodItem) => {
     try {
-      const response = await fetch("/api/macro-calculator", {
-        method: "POST",
+      setIsProcessing(true)
+      
+      // Save the food entry
+      const response = await fetch('/api/macro-calculator', {
+        method: 'POST',
         headers: {
           "Content-Type": "application/json",
         },
@@ -184,50 +209,71 @@ export function LabelScanner() {
     } catch (err) {
       console.error("Error saving food entry:", err)
       setError('Failed to save food entry')
+    } finally {
+      setIsProcessing(false)
     }
   }
 
   return (
-    <Card className="max-w-md mx-auto">
-      <CardContent className="p-6 space-y-4">
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+    <div className="relative">
+      {!cameraActive && !image && (
+        <div className="flex flex-col items-center justify-center p-4">
+          <Button onClick={startCamera} className="mb-2">
+            <Camera className="mr-2 h-4 w-4" /> Open Camera
+          </Button>
+          <p className="text-sm text-muted-foreground text-center">
+            Take a clear photo of the nutrition label
+          </p>
+        </div>
+      )}
 
-        {!image ? (
-          <div className="relative aspect-[4/3] bg-black rounded-lg overflow-hidden">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              className="absolute inset-0 w-full h-full object-cover"
-              onLoadedMetadata={() => {}}
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Button
-                onClick={startCamera}
-                className="bg-white/10 hover:bg-white/20"
-              >
-                <Camera className="w-6 h-6" />
-                <span className="ml-2">Start Camera</span>
-              </Button>
+      {cameraActive && (
+        <div className="fixed inset-0 z-50 bg-black">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            className="h-full w-full object-cover"
+          />
+          
+          <div className="absolute bottom-10 left-0 right-0 flex justify-center">
+            <Button
+              onClick={captureImage}
+              size="lg"
+              className="rounded-full h-16 w-16 flex items-center justify-center"
+            >
+              <Camera className="h-8 w-8" />
+            </Button>
+          </div>
+          
+          <Button
+            onClick={stopCamera}
+            variant="ghost"
+            className="absolute top-4 right-4 text-white"
+          >
+            <X className="h-6 w-6" />
+          </Button>
+        </div>
+      )}
+
+      {image && (
+        <Card className="max-w-md mx-auto">
+          <CardContent className="p-6 space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="relative aspect-[4/3] bg-black rounded-lg overflow-hidden">
+              <img
+                src={image}
+                alt="Captured nutrition label"
+                className="absolute inset-0 w-full h-full object-contain"
+              />
             </div>
-          </div>
-        ) : (
-          <div className="relative aspect-[4/3] bg-black rounded-lg overflow-hidden">
-            <img
-              src={image}
-              alt="Captured nutrition label"
-              className="absolute inset-0 w-full h-full object-contain"
-            />
-          </div>
-        )}
 
-        <div className="flex justify-between gap-4">
-          {image ? (
-            <>
+            <div className="flex justify-between gap-4">
               <Button
                 variant="outline"
                 onClick={resetCamera}
@@ -249,17 +295,10 @@ export function LabelScanner() {
                   'Process Image'
                 )}
               </Button>
-            </>
-          ) : (
-            <Button
-              onClick={captureImage}
-              className="w-full"
-            >
-              Capture Image
-            </Button>
-          )}
-        </div>
-      </CardContent>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <MealEntry
         isOpen={showMealEntry}
@@ -287,6 +326,6 @@ export function LabelScanner() {
           </div>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   )
 } 

@@ -73,8 +73,10 @@ interface FoodItem {
   unit: string;
   serving_size: string;
   serving_size_g: number;
-  serving_quantity: string | number
-  serving_quantity_unit: string
+  serving_size_imported: string | number | null;
+  product_quantity_unit: string;
+  serving_quantity: number;
+  serving_quantity_unit: string;
   perGramValues: {
     calories: number;
     carbs: number;
@@ -231,29 +233,24 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
       console.log("Scanned product data from OpenFoodFacts:", scannedProductData)
 
       // Convert the scanned product into FoodItem format
-      const foodData: FoodItem = {
-        food_ky: product.code,
-        foodName: product.product_name || "Unknown Food",
-        brands: product.brands || "Unknown Brand",
-        unit: mapUnit(product.serving_quantity_unit || ''),
-        serving_size: product.serving_quantity?.toString() || "100",
-        serving_size_g: product.serving_quantity || 100,
-        perGramValues: {
-          calories: (nutriments["energy-kcal_100g"] || 0) / 100,
-          carbs: (nutriments["carbohydrates_100g"] || 0) / 100,
-          fats: (nutriments["fat_100g"] || 0) / 100,
-          protein: (nutriments["proteins_100g"] || 0) / 100,
-          sugar: (nutriments["sugars_100g"] || 0) / 100,
-          fiber: (nutriments["fiber_100g"] || 0) / 100,
-          vitamin_a: (nutriments["vitamin-a_100g"] || 0) / 100,
-          vitamin_c: (nutriments["vitamin-c_100g"] || 0) / 100,
-          calcium: (nutriments["calcium_100g"] || 0) / 100,
-          iron: (nutriments["iron_100g"] || 0) / 100,
-          magnesium: (nutriments["magnesium_100g"] || 0) / 100,
-          phosphorus: (nutriments["phosphorus_100g"] || 0) / 100,
-          potassium: (nutriments["potassium_100g"] || 0) / 100,
-          sodium: (nutriments["sodium_100g"] || 0) / 100,
-        },
+      const serving_size_g = product.serving_quantity ? Number(product.serving_quantity) : 100;
+      const perGram = {
+        calories: (nutriments["energy-kcal_100g"] || 0) / 100,
+        carbs: (nutriments["carbohydrates_100g"] || 0) / 100,
+        fats: (nutriments["fat_100g"] || 0) / 100,
+        protein: (nutriments["proteins_100g"] || 0) / 100,
+        sugar: (nutriments["sugars_100g"] || 0) / 100,
+        fiber: (nutriments["fiber_100g"] || 0) / 100,
+        vitamin_a: (nutriments["vitamin-a_100g"] || 0) / 100,
+        vitamin_c: (nutriments["vitamin-c_100g"] || 0) / 100,
+        calcium: (nutriments["calcium_100g"] || 0) / 100,
+        iron: (nutriments["iron_100g"] || 0) / 100,
+        magnesium: (nutriments["magnesium_100g"] || 0) / 100,
+        phosphorus: (nutriments["phosphorus_100g"] || 0) / 100,
+        potassium: (nutriments["potassium_100g"] || 0) / 100,
+        sodium: (nutriments["sodium_100g"] || 0) / 100,
+      };
+      const calculatedValues = {
         calories: nutriments["energy-kcal_100g"] || 0,
         carbs: nutriments["carbohydrates_100g"] || 0,
         fats: nutriments["fat_100g"] || 0,
@@ -268,6 +265,21 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
         phosphorus: nutriments["phosphorus_100g"] || 0,
         potassium: nutriments["potassium_100g"] || 0,
         sodium: nutriments["sodium_100g"] || 0,
+      };
+
+      const foodData: FoodItem = {
+        food_ky: product.code,
+        foodName: product.product_name || "Unknown Food",
+        brands: product.brands || "Unknown Brand",
+        unit: "g",
+        serving_size: product.serving_size || "100",
+        serving_size_g: serving_size_g,
+        serving_size_imported: product.serving_size_imported,
+        product_quantity_unit: product.product_quantity_unit || "g",
+        serving_quantity: product.serving_quantity || serving_size_g,
+        serving_quantity_unit: product.product_quantity_unit || "g",
+        perGramValues: perGram,
+        ...calculatedValues
       }
 
       setSelectedFood(foodData)
@@ -426,6 +438,7 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
             <BarcodeScanner 
               onDetected={handleBarcodeDetected}
               onError={handleScanError}
+              onClose={() => setShowScanner(false)}
             />
           </div>
         </div>
@@ -444,7 +457,7 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
       <div className="flex justify-end">
         <Button 
           onClick={handleMealEntryConfirm}
-          variant="primary"
+          variant="default"
         >
           Add
         </Button>

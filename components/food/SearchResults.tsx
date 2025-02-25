@@ -49,7 +49,7 @@ export function SearchResults({
   }
 
   const handleUnitChange = (value: string) => {
-    onUnitChange({ target: { value } } as React.ChangeEvent<HTMLSelectElement>)
+    onUnitChange(value)
   }
 
   return (
@@ -123,7 +123,6 @@ export function SearchResults({
                     <Button variant="outline" onClick={onCancel} className="w-full sm:w-auto">
                       Cancel
                     </Button>
-
                   </div>
                 </div>
               )}

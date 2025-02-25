@@ -305,7 +305,7 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
   const confirmSave = async () => {
     if (!selectedFood) return
     try {
-      setLoading(true)
+      setIsLoading(true)
       const response = await fetch("/api/macro-calculator", {
         method: "POST",
         headers: {
@@ -327,7 +327,7 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
       console.error("Error saving food entry:", err)
       alert("Failed to save food entry")
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
