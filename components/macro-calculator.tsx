@@ -52,11 +52,14 @@ export function MacroCalculator({
   // Set the date client-side only
   useEffect(() => {
     if (initialDate) {
-      setSelectedDate(new Date(initialDate).toISOString().split('T')[0])
+      setSelectedDate(initialDate.split('T')[0]);
     } else {
-      setSelectedDate(new Date().toISOString().split('T')[0])
+      // For new entries, use current date
+      const today = new Date();
+      const formattedDate = today.toISOString().split('T')[0];
+      setSelectedDate(formattedDate);
     }
-  }, [initialDate])
+  }, [initialDate]);
 
   // Toggle to allow manual editing of calories.
   // When false, calories will auto-calculate.
@@ -175,6 +178,12 @@ export function MacroCalculator({
         {}
       )
 
+      // Create a normalized date to avoid timezone issues
+      const dateToUse = new Date(selectedDate);
+      const normalizedDate = new Date(
+        Date.UTC(dateToUse.getFullYear(), dateToUse.getMonth(), dateToUse.getDate())
+      ).toISOString();
+
       const requestBody = {
         meal,
         foodName: foodName || "Custom Entry",
@@ -183,7 +192,7 @@ export function MacroCalculator({
         fats: Number(fats || 0),
         protein: Number(protein || 0),
         ...micronutrientsData,
-        date: new Date(selectedDate).toISOString()
+        date: normalizedDate
       }
 
       const endpoint = editMode && initialFoodEntry 
@@ -379,7 +388,7 @@ export function MacroCalculator({
               variant="outline"
               className="flex-1"
             >
-              {isPage ? "Back to Flavor Journal" : "Cancel"}
+              Back
             </Button>
             <Button
               type="submit"

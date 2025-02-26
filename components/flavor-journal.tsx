@@ -182,7 +182,9 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
     setDropdownOpen(null); // Close the dropdown first
     setTimeout(() => {
       console.log("In setTimeout, preparing to redirect");
-      const targetUrl = `/add-food/macro-calculator?meal=${mealName.toLowerCase()}&date=${currentDate?.toISOString() || ''}`;
+      // Format the date properly to avoid timezone issues
+      let dateParam = getDateParam(currentDate);
+      const targetUrl = `/add-food/macro-calculator?meal=${mealName.toLowerCase()}&date=${dateParam}`;
       console.log("Redirecting to URL:", targetUrl);
       router.push(targetUrl);
       console.log("router.push called");
@@ -338,6 +340,14 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
     setShowMealEntry(true) // Show the MealEntry dialog instead of expanding the row
   }
 
+  // Add this function to FlavorJournal component
+  const getDateParam = (date: Date | null): string => {
+    if (!date) return '';
+    return new Date(
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+    ).toISOString();
+  }
+
   return (
     <>
       <Card className="w-full">
@@ -373,7 +383,7 @@ export function FlavorJournal({ meal = '' }: FlavorJournalProps) {
                       className="text-primary flex-1 xs:flex-none hover:bg-primary/10 hover:shadow-md transition-shadow duration-200 h-8"
                       asChild
                     >
-                      <Link href={`/add-food/${section.name.toLowerCase()}?date=${currentDate?.toISOString() || ''}`}>
+                      <Link href={`/add-food/${section.name.toLowerCase()}?date=${getDateParam(currentDate)}`}>
                         <Plus className="h-4 w-4 mr-1" />
                         <span className="hidden xs:inline">Add Food</span>
                         <span className="xs:hidden">Add Food</span>

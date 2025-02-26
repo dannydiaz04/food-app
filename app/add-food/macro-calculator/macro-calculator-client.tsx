@@ -10,7 +10,8 @@ export default function MacroCalculatorClient() {
   const date = searchParams.get("date")
 
   const handleClose = () => {
-    router.push("/flavor-journal")
+    // Go back to previous page instead of directly to flavor-journal
+    router.back()
   }
 
   return (
@@ -22,4 +23,4 @@ export default function MacroCalculatorClient() {
       initialDate={date || undefined}
     />
   )
-} 
+}

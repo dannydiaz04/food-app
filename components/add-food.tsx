@@ -20,6 +20,7 @@ import Tooltip from "@/components/ui/Tooltip"
 import { FoodImageScanner } from "./food-image-scanner"
 import { TextPromptEntry } from "./food/TextPromptEntry"
 import { Button } from "@/components/ui/button"
+import { useSearchParams } from "next/navigation"
 
 interface AddFoodProps {
   meal: string
@@ -42,6 +43,8 @@ export function AddFood({ meal }: AddFoodProps) {
   const [activeTab, setActiveTab] = useState("search")
   const barcodeScannerRef = useRef<{ stopCamera: () => void } | null>(null)
   const router = useRouter()
+  const searchParams = useSearchParams(); // Add this line to access URL parameters
+  const dateParam = searchParams.get('date');
 
   // Add this effect to stop the camera when the active tab changes
   useEffect(() => {
@@ -317,6 +320,12 @@ export function AddFood({ meal }: AddFoodProps) {
 
   const handleMealEntryConfirm = async (updatedFood: FoodItem) => {
     try {
+      // Parse the date parameter or use current date
+      let entryDate = new Date();
+      if (dateParam) {
+        entryDate = new Date(dateParam);
+      }
+      
       const response = await fetch("/api/macro-calculator", {
         method: "POST",
         headers: {
@@ -325,7 +334,7 @@ export function AddFood({ meal }: AddFoodProps) {
         body: JSON.stringify({
           ...updatedFood,
           meal,
-          date: new Date().toISOString(),
+          date: entryDate.toISOString(),
         }),
       })
       if (!response.ok) {
@@ -367,7 +376,12 @@ export function AddFood({ meal }: AddFoodProps) {
     
     // Handle navigation to calculator
     if (value === "calculator") {
-      router.push(`/add-food/macro-calculator?meal=${meal.toLowerCase()}`)
+      // Construct the URL with meal and date parameters
+      let calculatorUrl = `/add-food/macro-calculator?meal=${meal.toLowerCase()}`;
+      if (dateParam) {
+        calculatorUrl += `&date=${dateParam}`;
+      }
+      router.push(calculatorUrl);
     }
   }
 
