@@ -117,51 +117,60 @@ export function LabelScanner() {
       }
 
       const nutritionData = await apiResponse.json()
+      console.log("Label scan response:", nutritionData)
+
+      // Make sure all the nutritional values are numbers
+      const ensureNumber = (value: any) => {
+        const num = parseFloat(value)
+        return isNaN(num) ? 0 : num // Return 0 for any NaN values
+      }
 
       // Convert the nutrition data to our FoodItem format
       const foodItem: FoodItem = {
         food_ky: Date.now().toString(), // Temporary ID
-        foodName: "Scanned Food Item",
-        brands: "",
-        unit: nutritionData.serving_size_unit || "g",
-        serving_size: nutritionData.serving_size?.toString() || "100",
-        serving_size_g: nutritionData.serving_size || 100,
+        foodName: nutritionData.foodName || "Scanned Food Item",
+        brands: nutritionData.brand || "",
+        unit: "g",
+        serving_size: ensureNumber(nutritionData.serving_size || 100),
+        serving_size_g: ensureNumber(nutritionData.serving_size || 100),
         serving_size_imported: nutritionData.serving_size,
-        product_quantity_unit: nutritionData.serving_size_unit || "g",
-        serving_quantity: nutritionData.serving_size || 100,
-        serving_quantity_unit: nutritionData.serving_size_unit || "g",
+        product_quantity_unit: "g",
+        serving_quantity: ensureNumber(nutritionData.serving_size || 100),
+        serving_quantity_unit: "g",
         perGramValues: {
-          calories: (nutritionData.calories || 0) / 100,
-          carbs: (nutritionData.total_carbohydrates || 0) / 100,
-          fats: (nutritionData.total_fat || 0) / 100,
-          protein: (nutritionData.protein || 0) / 100,
-          sugar: (nutritionData.total_sugars || 0) / 100,
-          fiber: (nutritionData.dietary_fiber || 0) / 100,
-          vitamin_a: (nutritionData.vitamin_a || 0) / 100,
-          vitamin_c: (nutritionData.vitamin_c || 0) / 100,
-          calcium: (nutritionData.calcium || 0) / 100,
-          iron: (nutritionData.iron || 0) / 100,
-          magnesium: (nutritionData.magnesium || 0) / 100,
-          phosphorus: (nutritionData.phosphorus || 0) / 100,
-          potassium: (nutritionData.potassium || 0) / 100,
-          sodium: (nutritionData.sodium || 0) / 100,
+          calories: ensureNumber(nutritionData.calories) / 100,
+          carbs: ensureNumber(nutritionData.carbs) / 100,
+          fats: ensureNumber(nutritionData.fat || nutritionData.fats) / 100,
+          protein: ensureNumber(nutritionData.protein) / 100,
+          sugar: ensureNumber(nutritionData.sugar || nutritionData.sugars) / 100,
+          fiber: ensureNumber(nutritionData.fiber) / 100,
+          vitamin_a: ensureNumber(nutritionData.vitamin_a) / 100,
+          vitamin_c: ensureNumber(nutritionData.vitamin_c) / 100,
+          calcium: ensureNumber(nutritionData.calcium) / 100,
+          iron: ensureNumber(nutritionData.iron) / 100,
+          magnesium: ensureNumber(nutritionData.magnesium) / 100,
+          phosphorus: ensureNumber(nutritionData.phosphorus) / 100,
+          potassium: ensureNumber(nutritionData.potassium) / 100,
+          sodium: ensureNumber(nutritionData.sodium) / 100,
         },
-        calories: nutritionData.calories || 0,
-        carbs: nutritionData.total_carbohydrates || 0,
-        fats: nutritionData.total_fat || 0,
-        protein: nutritionData.protein || 0,
-        sugar: nutritionData.total_sugars || 0,
-        fiber: nutritionData.dietary_fiber || 0,
-        vitamin_a: nutritionData.vitamin_a || 0,
-        vitamin_c: nutritionData.vitamin_c || 0,
-        calcium: nutritionData.calcium || 0,
-        iron: nutritionData.iron || 0,
-        magnesium: nutritionData.magnesium || 0,
-        phosphorus: nutritionData.phosphorus || 0,
-        potassium: nutritionData.potassium || 0,
-        sodium: nutritionData.sodium || 0,
+        calories: ensureNumber(nutritionData.calories),
+        carbs: ensureNumber(nutritionData.carbs),
+        fats: ensureNumber(nutritionData.fat || nutritionData.fats),
+        protein: ensureNumber(nutritionData.protein),
+        sugar: ensureNumber(nutritionData.sugar || nutritionData.sugars),
+        fiber: ensureNumber(nutritionData.fiber),
+        vitamin_a: ensureNumber(nutritionData.vitamin_a),
+        vitamin_c: ensureNumber(nutritionData.vitamin_c),
+        calcium: ensureNumber(nutritionData.calcium),
+        iron: ensureNumber(nutritionData.iron),
+        magnesium: ensureNumber(nutritionData.magnesium),
+        phosphorus: ensureNumber(nutritionData.phosphorus),
+        potassium: ensureNumber(nutritionData.potassium),
+        sodium: ensureNumber(nutritionData.sodium),
       }
 
+      console.log("Converted foodItem:", foodItem)
+      
       setScannedFood(foodItem)
       setShowMealEntry(true)
       setIsProcessing(false)

@@ -39,6 +39,8 @@ export interface FoodItem {
   phosphorus: number
   potassium: number
   sodium: number
+  meal?: string
+  date?: string
 }
 
 export interface OpenFoodProduct {

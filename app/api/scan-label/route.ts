@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: "system",
-          content: "You are a nutrition label analyzer. Extract information from nutrition labels and return it in clean JSON format without markdown formatting, code blocks, or any additional text."
+          content: "You are a nutrition label analyzer. Extract information from nutrition labels and return it in clean JSON format without markdown formatting, code blocks, or any additional text. Return all nutritional values as numbers, not strings. If a value is not found or is 0, return 0 rather than null or omitting the field."
         },
         {
           role: "user",

@@ -455,12 +455,12 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
 
       {/* Keep only the 'Add' button */}
       <div className="flex justify-end">
-        <Button 
+        {/* <Button 
           onClick={handleMealEntryConfirm}
           variant="default"
         >
           Add
-        </Button>
+        </Button> */}
         {/* Removed the Macro Calculator button */}
         {/* <Button 
           onClick={handleQuickAddCalories}
