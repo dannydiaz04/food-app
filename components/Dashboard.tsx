@@ -106,8 +106,13 @@ export function Dashboard({ totals, goals, remaining, weeklyData: initialWeeklyD
   // Use these defaults if goals aren't provided
   const calorieGoal = goals?.calories || defaultGoals.calories
 
-  // Add this calculation before the return statement
-  const weeklyTotalCalories = weeklyData.reduce((sum, day) => sum + day.calories, 0);
+  // Calculate the total calories from the actual weekly data
+  const weeklyTotalCalories = weeklyData
+    .filter(day => day && typeof day.calories === 'number') // Ensure we only count valid entries
+    .reduce((sum, day) => sum + day.calories, 0);
+
+  // Add a debug log to verify the calculation
+  console.log("Weekly data entries:", weeklyData.length, "Total calories:", weeklyTotalCalories);
 
   return (
     <>
