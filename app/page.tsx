@@ -97,7 +97,7 @@ export default async function HomePage() {
   return (
     <div>
       <Dashboard totals={totals} goals={goals} remaining={remaining} />
-      <TestOpenAI />
+      {/* <TestOpenAI /> */}
     </div>
   )
 }

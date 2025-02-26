@@ -22,9 +22,9 @@ interface SearchResultsProps {
 
 // Define colors for macros
 const macroColors = {
-  carbs: "text-emerald-500", // Replace with actual color class
-  protein: "text-amber-500", // Replace with actual color class
-  fats: "text-purple-500", // Replace with actual color class
+  carbs: "text-emerald-600 dark:text-emerald-500", // Darker for light mode
+  protein: "text-amber-600 dark:text-amber-500", // Darker for light mode
+  fats: "text-purple-600 dark:text-purple-500", // Darker for light mode
 };
 
 export function SearchResults({

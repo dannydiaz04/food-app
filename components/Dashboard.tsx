@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Utensils, Flame } from "lucide-react"
+import { Utensils, Flame, Target } from "lucide-react"
 import Link from "next/link"
 import { Navigation } from "@/components/navigation"
 import { useState, useEffect } from "react"
@@ -98,21 +98,30 @@ export function Dashboard({ totals, goals, remaining, weeklyData: initialWeeklyD
             <CardContent className="flex items-center gap-6">
               <div className="flex-1">
                 <div className="text-center mb-4">
-                  <div className="text-3xl font-bold">{remaining.calories}</div>
-                  <div className="text-sm text-muted-foreground">Calories Remaining</div>
+                  <div className={`text-3xl font-bold ${remaining.calories < 0 ? 'text-red-500' : 'text-green-500'}`}>
+                    {remaining.calories}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Calories Remaining For The Day</div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm flex items-center gap-2">
                       <Utensils className="w-4 h-4" />
-                      Food
+                      Calories From Food
                     </span>
-                    <span className="text-sm">{totals.calories}</span>
+                    <span className={`text-sm ${remaining.calories < 0 ? 'text-red-500' : 'text-green-500'}`}>{totals.calories}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm flex items-center gap-2">
+                      <Target className="w-4 h-4" />
+                      Daily Calorie Goal
+                    </span>
+                    <span className={"text-sm"}>{goals.calories}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm flex items-center gap-2">
                       <Flame className="w-4 h-4" />
-                      Exercise
+                      Calories From Exercise
                     </span>
                     <span className="text-sm ml-4">0</span>
                   </div>
@@ -148,9 +157,10 @@ export function Dashboard({ totals, goals, remaining, weeklyData: initialWeeklyD
         </div>
 
         {/* New weekly stacked bar chart */}
+        <CardTitle>Weekly</CardTitle>
         <Card>
           <CardHeader>
-            <CardTitle>Weekly Calories & Macros</CardTitle>
+          <CardTitle>Calories & Macros</CardTitle>
             <p className="text-sm text-muted-foreground">
               {isLoading ? "Loading weekly data..." : "Bars show macro breakdown by day"}
             </p>
@@ -290,7 +300,7 @@ export function Dashboard({ totals, goals, remaining, weeklyData: initialWeeklyD
           </CardContent>
         </Card>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        {/* <div className="grid gap-6 md:grid-cols-3">
           <Card>
             <CardHeader>
               <CardTitle>Heart Healthy</CardTitle>
@@ -371,7 +381,7 @@ export function Dashboard({ totals, goals, remaining, weeklyData: initialWeeklyD
               </div>
             </CardContent>
           </Card>
-        </div>
+        </div> */}
       </div>
     </>
   )

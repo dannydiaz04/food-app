@@ -14,24 +14,23 @@ export function Navigation() {
     { href: "/flavor-journal", label: "Flavor Journal" },
     { href: "/database", label: "Database" },
     { href: "/settings", label: "Settings" },
-    { href: "/scan-label", label: "Scan Label" },
   ]
 
   return (
     <>
       <nav className="bg-background border-b p-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <Link href="/" className="text-green-400 hover:text-green-300 text-xl font-bold">
+          <Link href="/" className="text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300 text-xl font-bold">
             Flavor 
-            <div className="text-green-400 hover:text-green-300">Journal</div>
+            <div className="text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300">Journal</div>
           </Link>
           <div className="hidden md:flex items-center space-x-6">
             {navItems.map((item) => (
-              <Link key={item.href} href={item.href} className="text-green-400 hover:text-green-300">
+              <Link key={item.href} href={item.href} className="text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300">
                 {item.label}
               </Link>
             ))}
-            <div className="text-green-400 hover:text-green-300">
+            <div className="text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300">
               <SignOutButton />
             </div>
             <ThemeToggle />
@@ -41,7 +40,7 @@ export function Navigation() {
             <Button
               variant="ghost"
               size="icon"
-              className="text-green-400"
+              className="text-green-600 dark:text-green-400"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? <X /> : <Menu />}
@@ -57,13 +56,13 @@ export function Navigation() {
             <Link
               key={item.href}
               href={item.href}
-              className="block text-green-400 hover:text-green-300 py-2"
+              className="block text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300 py-2"
               onClick={() => setMobileMenuOpen(false)}
             >
               {item.label}
             </Link>
           ))}
-          <div className="text-green-400 hover:text-green-300 py-2">
+          <div className="text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300 py-2">
             <SignOutButton />
           </div>
         </div>

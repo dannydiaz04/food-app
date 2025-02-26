@@ -59,8 +59,16 @@ export async function POST(request: Request) {
             {
               role: "user",
               content: [
-                { type: "text", text: "What is in this image?" },
-                { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } },
+                { 
+                  type: "text", 
+                  text: "What is in this image?" },
+                { 
+                  type: "image_url", 
+                  image_url: { 
+                    url: `data:image/jpeg;base64,${base64Image}`, 
+                    detail: "high" 
+                  }, 
+                },
               ],
             },
           ],
