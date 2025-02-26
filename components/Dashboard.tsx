@@ -5,47 +5,7 @@ import { Utensils, Flame } from "lucide-react"
 import Link from "next/link"
 import { Navigation } from "@/components/navigation"
 import { useState, useEffect } from "react"
-
-// Define the structure for daily data
-interface DailyData {
-  date: string
-  calories: number
-  carbs: number
-  fats: number
-  protein: number
-  sodium: number
-  sugar: number
-  fiber: number
-}
-
-interface DashboardProps {
-  totals: {
-    calories: number
-    carbs: number
-    fats: number
-    protein: number
-    sodium: number
-    sugar: number
-    fiber: number
-  }
-  goals: {
-    calories: number
-    carbs: number
-    fats: number
-    protein: number
-    sodium: number
-    sugar: number
-    fiber: number
-  }
-  remaining: {
-    calories: number
-    carbs: number
-    fats: number
-    protein: number
-  }
-  // Add weekly data prop
-  weeklyData: DailyData[]
-}
+import { DailyData, DashboardProps } from "@/types/dashboard-analytics"
 
 export function Dashboard({ totals, goals, remaining, weeklyData: initialWeeklyData = [] }: DashboardProps) {
   const [weeklyData, setWeeklyData] = useState<DailyData[]>(initialWeeklyData)
