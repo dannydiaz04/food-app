@@ -10,7 +10,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState, useEffect } from "react"
-import { Loader2, Plus, Minus, ChevronDown, ChevronUp } from "lucide-react"
+import { Loader2, Plus, Minus, ChevronDown, ChevronUp, Calculator, Edit } from "lucide-react"
 import { FoodItem } from "@/types/food"
 import { 
   Select,
@@ -27,6 +27,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface MealEntryProps {
   isOpen: boolean
@@ -49,26 +50,82 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
   
   // Basic nutrition values
   const [foodName, setFoodName] = useState("")
-  const [calories, setCalories] = useState(0)
-  const [carbs, setCarbs] = useState(0)
-  const [fats, setFats] = useState(0)
-  const [protein, setProtein] = useState(0)
+  const [calories, setCalories] = useState<number | "">("")
+  const [carbs, setCarbs] = useState<number | "">("")
+  const [fats, setFats] = useState<number | "">("")
+  const [protein, setProtein] = useState<number | "">("")
   
   // Meal and date
   const [selectedMeal, setSelectedMeal] = useState("breakfast")
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   
   // Micronutrients
-  const [sugar, setSugar] = useState(0)
-  const [fiber, setFiber] = useState(0)
-  const [sodium, setSodium] = useState(0)
-  const [calcium, setCalcium] = useState(0)
-  const [iron, setIron] = useState(0)
-  const [vitaminA, setVitaminA] = useState(0)
-  const [vitaminC, setVitaminC] = useState(0)
+  const [sugar, setSugar] = useState<number | "">("")
+  const [fiber, setFiber] = useState<number | "">("")
+  const [sodium, setSodium] = useState<number | "">("")
+  const [calcium, setCalcium] = useState<number | "">("")
+  const [iron, setIron] = useState<number | "">("")
+  const [vitaminA, setVitaminA] = useState<number | "">("")
+  const [vitaminC, setVitaminC] = useState<number | "">("")
   
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [showMicronutrients, setShowMicronutrients] = useState(false)
+  const [autoCalculateCalories, setAutoCalculateCalories] = useState(true)
+
+  // Auto-calculate calories based on macros
+  useEffect(() => {
+    if (autoCalculateCalories) {
+      const carbsValue = typeof carbs === "number" ? carbs : 0;
+      const proteinValue = typeof protein === "number" ? protein : 0;
+      const fatsValue = typeof fats === "number" ? fats : 0;
+      
+      const calculatedCalories = Math.round(
+        (carbsValue * 4) + (proteinValue * 4) + (fatsValue * 9)
+      );
+      
+      setCalories(calculatedCalories || "");
+    }
+  }, [carbs, protein, fats, autoCalculateCalories]);
+
+  // Handle manual calories input, turn off auto-calculation
+  const handleCaloriesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === "") {
+      setCalories("");
+      // Don't enable auto-calculation when clearing the field
+    } else {
+      setCalories(parseFloat(value));
+      setAutoCalculateCalories(false);
+    }
+  };
+
+  // Add handlers for macro updates that enable auto-calculation
+  const handleCarbsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCarbs(value === "" ? "" : parseFloat(value));
+    // Only enable auto-calculation if there's a value
+    if (value !== "") {
+      setAutoCalculateCalories(true);
+    }
+  };
+
+  const handleProteinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setProtein(value === "" ? "" : parseFloat(value));
+    // Only enable auto-calculation if there's a value
+    if (value !== "") {
+      setAutoCalculateCalories(true);
+    }
+  };
+
+  const handleFatsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFats(value === "" ? "" : parseFloat(value));
+    // Only enable auto-calculation if there's a value
+    if (value !== "") {
+      setAutoCalculateCalories(true);
+    }
+  };
 
   useEffect(() => {
     if (selectedFood && selectedFood.perGramValues) {
@@ -85,6 +142,9 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
       
       // Reset confirmation state
       setShowConfirmation(false)
+      
+      // Turn off auto-calculation initially when loading food
+      setAutoCalculateCalories(false)
     }
   }, [selectedFood])
 
@@ -108,7 +168,7 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
     const newSize = e.target.value
     setServingSize(newSize)
     
-    if (selectedFood && selectedFood.perGramValues) {
+    if (selectedFood && selectedFood.perGramValues && newSize !== "") {
       // Scale the nutritional values based on the new serving size
       calculateNutrients(parseFloat(newSize))
     }
@@ -173,10 +233,14 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
     setShowMicronutrients(!showMicronutrients)
   }
 
+  const toggleCaloriesEditMode = () => {
+    setAutoCalculateCalories(!autoCalculateCalories);
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Food Entry</DialogTitle>
           </DialogHeader>
@@ -272,14 +336,32 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="calories">Calories</Label>
-                <Input
-                  id="calories"
-                  value={calories}
-                  onChange={(e) => setCalories(parseFloat(e.target.value) || 0)}
-                  className="flex-1"
-                  type="number"
-                  min="0"
-                />
+                <div className="flex">
+                  <Input
+                    id="calories"
+                    value={calories}
+                    onChange={handleCaloriesChange}
+                    className="flex-1 rounded-r-none"
+                    type="number"
+                    min="0"
+                    disabled={autoCalculateCalories}
+                  />
+                  <Button 
+                    type="button"
+                    onClick={toggleCaloriesEditMode} 
+                    variant="outline" 
+                    size="icon"
+                    className="rounded-l-none border-l-0"
+                    title={autoCalculateCalories ? "Switch to manual entry" : "Switch to auto-calculation"}
+                  >
+                    {autoCalculateCalories ? <Edit className="h-4 w-4" /> : <Calculator className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {autoCalculateCalories 
+                    ? "Calories are calculated from macros (4 cal/g carbs, 4 cal/g protein, 9 cal/g fat)" 
+                    : "Manual entry mode"}
+                </p>
               </div>
               
               <div className="grid grid-cols-3 gap-2">
@@ -288,7 +370,7 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
                   <Input
                     id="carbs"
                     value={carbs}
-                    onChange={(e) => setCarbs(parseFloat(e.target.value) || 0)}
+                    onChange={handleCarbsChange}
                     className="flex-1"
                     type="number"
                     min="0"
@@ -300,7 +382,7 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
                   <Input
                     id="protein"
                     value={protein}
-                    onChange={(e) => setProtein(parseFloat(e.target.value) || 0)}
+                    onChange={handleProteinChange}
                     className="flex-1"
                     type="number"
                     min="0"
@@ -312,13 +394,28 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
                   <Input
                     id="fats"
                     value={fats}
-                    onChange={(e) => setFats(parseFloat(e.target.value) || 0)}
+                    onChange={handleFatsChange}
                     className="flex-1"
                     type="number"
                     min="0"
                     step="0.1"
                   />
                 </div>
+              </div>
+
+              {/* Add this after the macro inputs */}
+              <div className="flex items-center space-x-2 mt-2">
+                <Checkbox 
+                  id="auto-calculate"
+                  checked={autoCalculateCalories}
+                  onCheckedChange={(checked) => setAutoCalculateCalories(checked === true)}
+                />
+                <label 
+                  htmlFor="auto-calculate"
+                  className="text-sm text-muted-foreground"
+                >
+                  Auto-calculate calories from macros
+                </label>
               </div>
             </div>
 
@@ -345,7 +442,7 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
                     <Input
                       id="sugar"
                       value={sugar}
-                      onChange={(e) => setSugar(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => setSugar(e.target.value === "" ? "" : parseFloat(e.target.value))}
                       type="number"
                       min="0"
                       step="0.1"
@@ -356,7 +453,7 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
                     <Input
                       id="fiber"
                       value={fiber}
-                      onChange={(e) => setFiber(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => setFiber(e.target.value === "" ? "" : parseFloat(e.target.value))}
                       type="number"
                       min="0"
                       step="0.1"
@@ -370,7 +467,7 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
                     <Input
                       id="sodium"
                       value={sodium}
-                      onChange={(e) => setSodium(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => setSodium(e.target.value === "" ? "" : parseFloat(e.target.value))}
                       type="number"
                       min="0"
                     />
@@ -380,7 +477,7 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
                     <Input
                       id="calcium"
                       value={calcium}
-                      onChange={(e) => setCalcium(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => setCalcium(e.target.value === "" ? "" : parseFloat(e.target.value))}
                       type="number"
                       min="0"
                     />
@@ -393,7 +490,7 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
                     <Input
                       id="iron"
                       value={iron}
-                      onChange={(e) => setIron(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => setIron(e.target.value === "" ? "" : parseFloat(e.target.value))}
                       type="number"
                       min="0"
                       step="0.1"
@@ -404,7 +501,7 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
                     <Input
                       id="vitaminA"
                       value={vitaminA}
-                      onChange={(e) => setVitaminA(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => setVitaminA(e.target.value === "" ? "" : parseFloat(e.target.value))}
                       type="number"
                       min="0"
                     />
@@ -414,7 +511,7 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
                     <Input
                       id="vitaminC"
                       value={vitaminC}
-                      onChange={(e) => setVitaminC(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => setVitaminC(e.target.value === "" ? "" : parseFloat(e.target.value))}
                       type="number"
                       min="0"
                     />

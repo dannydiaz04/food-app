@@ -67,7 +67,7 @@ export function SearchResults({
                 <Button
                   variant={expandedItemId === product.code ? "ghost" : "default"}
                   onClick={() => onResultClick(product)}
-                  className="shrink-0 w-full sm:w-auto"
+                  className="shrink-0 w-32 sm:w-auto"
                 >
                   {expandedItemId === product.code ? "Close" : "Details"}
                 </Button>
