@@ -43,6 +43,15 @@ const macroColors = {
   fats: "text-purple-500", // Replace with actual color class
 };
 
+// Define conversion factors to grams
+const unitConversions = {
+  g: 1,
+  oz: 28.3495,
+  cup: 236.588,
+  tbsp: 14.7868,
+  tsp: 4.92892
+};
+
 export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntryProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [servingSize, setServingSize] = useState("")
@@ -164,13 +173,38 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
     setSelectedDate(new Date(formattedDate))
   }, [])
 
+  const handleUnitChange = (newUnit: string) => {
+    if (selectedFood?.perGramValues && servingSize !== "") {
+      // Convert current serving size from old unit to grams
+      const currentSizeInGrams = parseFloat(servingSize) * unitConversions[unit as keyof typeof unitConversions];
+      
+      // Convert from grams to the new unit
+      const newSizeInNewUnit = currentSizeInGrams / unitConversions[newUnit as keyof typeof unitConversions];
+      
+      // Update serving size value with the converted amount (rounded to 1 decimal place)
+      setServingSize(Math.round(newSizeInNewUnit * 10) / 10 + "");
+      
+      // Update the unit
+      setUnit(newUnit);
+      
+      // Nutrition values stay the same as they're based on the same amount of food,
+      // just expressed in different units
+    } else {
+      // If there's no serving size or food data, just update the unit
+      setUnit(newUnit);
+    }
+  };
+
   const handleServingSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newSize = e.target.value
     setServingSize(newSize)
     
     if (selectedFood && selectedFood.perGramValues && newSize !== "") {
-      // Scale the nutritional values based on the new serving size
-      calculateNutrients(parseFloat(newSize))
+      // Convert the new serving size to grams based on the selected unit
+      const newSizeInGrams = parseFloat(newSize) * unitConversions[unit as keyof typeof unitConversions];
+      
+      // Scale the nutritional values based on the new serving size in grams
+      calculateNutrients(newSizeInGrams)
     }
   }
 
@@ -317,7 +351,7 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
                   type="number"
                   min="0"
                 />
-                <Select value={unit} onValueChange={(value) => setUnit(value)}>
+                <Select value={unit} onValueChange={handleUnitChange}>
                   <SelectTrigger className="w-[100px]">
                     <SelectValue placeholder="Unit" />
                   </SelectTrigger>
