@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     if (!userError && userData) {
       // Try to save the food to the food_info table
       try {
-        // Check if this food already exists
+        // Check if this food already exists in the food_info table
         const { data: existingFood } = await supabase
           .from('food_info')
           .select('id')
@@ -138,7 +138,6 @@ export async function POST(request: NextRequest) {
               fiber: foodData.fiber || 0,
               sugar: foodData.sugar || 0,
               created_at: new Date(),
-              updated_at: new Date(),
             });
         }
       } catch (saveError) {

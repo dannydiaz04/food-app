@@ -134,20 +134,35 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
   }
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
+    setIsSaving(true);
     
-    const foodData = {
-      foodName,
-      calories: calories,
-      carbs: carbs,
-      protein: protein,
-      fats: fats,
-      meal: selectedMeal,
-      date: selectedDate.toISOString(),
+    try {
+      const foodData = {
+        foodName,
+        calories: calories,
+        carbs: carbs,
+        protein: protein,
+        fats: fats,
+        meal: selectedMeal,
+        date: selectedDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+        // Include other fields as needed
+        sugar: sugar,
+        fiber: fiber,
+        sodium: sodium,
+        calcium: calcium,
+        iron: iron,
+        vitamin_a: vitaminA,
+        vitamin_c: vitaminC,
+      };
+      
+      onConfirm(foodData);
+    } catch (error) {
+      console.error("Error in form submission:", error);
+    } finally {
+      setIsSaving(false);
     }
-    
-    onConfirm(foodData)
-  }
+  };
 
   const handleConfirmationClose = () => {
     setShowConfirmation(false)

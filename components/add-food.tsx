@@ -21,6 +21,7 @@ import { FoodImageScanner } from "./food-image-scanner"
 import { TextPromptEntry } from "./food/TextPromptEntry"
 import { Button } from "@/components/ui/button"
 import { useSearchParams } from "next/navigation"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface AddFoodProps {
   meal: string
@@ -45,6 +46,7 @@ export function AddFood({ meal }: AddFoodProps) {
   const router = useRouter()
   const searchParams = useSearchParams(); // Add this line to access URL parameters
   const dateParam = searchParams.get('date');
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   // Add this effect to stop the camera when the active tab changes
   useEffect(() => {
@@ -318,46 +320,43 @@ export function AddFood({ meal }: AddFoodProps) {
     setExpandedItemId(null)
   }
 
-  const handleMealEntryConfirm = async (updatedFood: FoodItem) => {
+  const handleMealEntryConfirm = async (foodData: any) => {
     try {
-      // Parse the date parameter or use current date
-      let entryDate = new Date();
-      if (dateParam) {
-        entryDate = new Date(dateParam);
-      }
+      setShowMealEntry(false);
       
-      const response = await fetch("/api/macro-calculator", {
-        method: "POST",
+      // Make sure we have a valid user session before proceeding
+      const response = await fetch('/api/food-entries', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...updatedFood,
-          meal,
-          date: entryDate.toISOString(),
+          ...foodData,
+          // Make sure all required fields are present
+          foodName: foodData.foodName || (selectedFood?.foodName || 'Unknown food'),
+          calories: foodData.calories || 0,
+          carbs: foodData.carbs || 0,
+          protein: foodData.protein || 0,
+          fats: foodData.fats || 0,
+          meal: foodData.meal || 'snack',
+          date: foodData.date || new Date().toISOString().split('T')[0],
         }),
-      })
+      });
+
       if (!response.ok) {
-        throw new Error("Failed to save food entry")
+        throw new Error(`Failed to save food: ${response.statusText}`);
       }
+
+      // Show success message or redirect
+      setShowConfirmation(true);
       
-      // Reset the search state after successful save
-      setSelectedFood(null)
-      setExpandedItemId(null)
-      setShowMealEntry(false)
-      
-      // Clear the search query and results (optional)
-      setSearchQuery("")
-      setSearchResults([])
-      setHasSearched(false)
-      
-      // Refresh recent foods list
-      fetchRecentFoods()
-    } catch (err) {
-      console.error("Error saving food entry:", err)
-      throw err
+      // Optionally refresh data
+      // refreshData();
+    } catch (error) {
+      console.error('Error saving food entry:', error);
+      setError('Failed to save food entry. Please try again.');
     }
-  }
+  };
 
   const toggleNutrition = () => {
     setShowNutrition((prev) => !prev)
@@ -540,6 +539,27 @@ export function AddFood({ meal }: AddFoodProps) {
         onConfirm={handleMealEntryConfirm}
         selectedFood={selectedFood}
       />
+
+      {showConfirmation && (
+        <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Success!</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p>Your food has been added successfully.</p>
+            </div>
+            <div className="flex justify-end">
+              <Button 
+                onClick={() => setShowConfirmation(false)}
+                className="w-full sm:w-auto"
+              >
+                OK
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

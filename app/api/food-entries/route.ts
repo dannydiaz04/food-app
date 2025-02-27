@@ -79,58 +79,69 @@ export async function GET() {
 // POST endpoint for creating new entries
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
+    // Get the authenticated user's session
+    const session = await getServerSession(authOptions);
 
+    // Check if user is authenticated
     if (!session?.user?.email) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
-      )
+      );
     }
 
-    // Get the user's ID from Supabase
+    // Get the user's ID from Supabase using their email
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id')
       .eq('email', session.user.email)
-      .single()
+      .single();
 
     if (userError || !userData) {
+      console.error("Error finding user:", userError);
       return NextResponse.json(
         { error: "User not found" },
         { status: 404 }
-      )
+      );
     }
 
-    const body = await request.json()
-
-    // Insert new food entry into Supabase
+    // Parse the request body
+    const foodData = await request.json();
+    
+    // Insert the food entry into Supabase
     const { error } = await supabase
       .from('food')
       .insert({
         userId: userData.id,
-        foodName: body.foodName,
-        meal: body.meal,
-        calories: body.calories,
-        carbs: body.carbs,
-        fat: body.fat,
-        protein: body.protein,
-        sodium: body.sodium,
-        sugar: body.sugar,
-        date: new Date(body.date),
-      })
+        foodName: foodData.foodName,
+        calories: Math.round(Number(foodData.calories) || 0),
+        carbs: Math.round(Number(foodData.carbs) || 0) * 10 / 10,
+        fats: Math.round(Number(foodData.fats) || 0) * 10 / 10,
+        protein: Math.round(Number(foodData.protein) || 0) * 10 / 10,
+        meal: foodData.meal || 'snack',
+        date: foodData.date || new Date().toISOString().split('T')[0],
+        created_at: new Date(),
+      });
 
     if (error) {
-      throw error
+      console.error("Error inserting food entry:", error);
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ message: "Food entry created successfully" })
+    return NextResponse.json({ 
+      success: true, 
+      message: "Food entry added successfully",
+      foodData: foodData
+    });
   } catch (error) {
-    console.error("Error creating food entry:", error)
+    console.error("Error adding food entry:", error);
     return NextResponse.json(
-      { error: "Failed to create food entry" },
+      { error: "Failed to add food entry" },
       { status: 500 }
-    )
+    );
   }
 }
 
