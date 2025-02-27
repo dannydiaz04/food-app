@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface EditFoodEntry {
   food_ky: string;
@@ -165,6 +166,12 @@ export function MacroCalculator({
     setter(value);
   };
 
+  // Define the meal options
+  const mealOptions = ["breakfast", "lunch", "dinner", "snack"];
+
+  // Add this state variable for selected meal
+  const [selectedMeal, setSelectedMeal] = useState("breakfast"); // Default meal
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedDate) return
@@ -185,7 +192,7 @@ export function MacroCalculator({
       ).toISOString();
 
       const requestBody = {
-        meal,
+        meal: selectedMeal,
         foodName: foodName || "Custom Entry",
         calories: Number(calories || 0),
         carbs: Number(carbs || 0),
@@ -226,6 +233,7 @@ export function MacroCalculator({
         Object.fromEntries(Object.keys(micronutrients).map((key) => [key, ""]))
       )
       onClose?.()
+      alert("Food added successfully!") // Success alert
     } catch (error) {
       console.error(editMode ? "Error updating food entry:" : "Error submitting food entry:", error)
       // You might want to show an error message to the user here
@@ -239,7 +247,7 @@ export function MacroCalculator({
     <Card className="w-full max-w-md mx-4 border-primary max-h-[90vh] flex flex-col">
       <CardContent className="pt-6 overflow-y-auto">
         <h2 className="text-xl font-bold mb-4 text-primary">
-          Macro Calculator – {meal}
+          Macro Calculator
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* DATE INPUT */}
@@ -254,6 +262,23 @@ export function MacroCalculator({
               onChange={(e) => setSelectedDate(e.target.value)}
               className="border-input"
             />
+          </div>
+
+          {/* MEAL SELECTION */}
+          <div className="space-y-2">
+            <Label htmlFor="meal">Select Meal</Label>
+            <Select value={selectedMeal} onValueChange={setSelectedMeal}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a meal" />
+              </SelectTrigger>
+              <SelectContent>
+                {mealOptions.map((meal) => (
+                  <SelectItem key={meal} value={meal}>
+                    {meal.charAt(0).toUpperCase() + meal.slice(1)} {/* Capitalize the first letter */}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* FOOD NAME INPUT */}
@@ -399,7 +424,7 @@ export function MacroCalculator({
               )}
               disabled={!overrideCalories && (!carbs && !fats && !protein)}
             >
-              Add to {meal}
+              Add to {selectedMeal}
             </Button>
           </div>
         </form>
