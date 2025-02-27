@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import type { FoodItem } from "@/types/food"
 import { Camera, X } from "lucide-react"
+import { Progress } from "@/components/ui/progress"
 
 interface TextPromptEntryProps {
   onFoodAnalyzed: (food: FoodItem) => void
@@ -17,6 +18,8 @@ export function TextPromptEntry({ onFoodAnalyzed }: TextPromptEntryProps) {
   const [error, setError] = useState<string | null>(null)
   const [showCamera, setShowCamera] = useState(false)
   const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null)
+  const [progress, setProgress] = useState(0)
+  const [processingStage, setProcessingStage] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -24,8 +27,30 @@ export function TextPromptEntry({ onFoodAnalyzed }: TextPromptEntryProps) {
 
     setIsProcessing(true)
     setError(null)
+    setProgress(10)
+    setProcessingStage("Initializing analysis...")
 
     try {
+      // Simulate progress updates
+      const progressInterval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval)
+            return 90
+          }
+          return prev + 10
+        })
+        
+        // Update processing stage messages
+        if (progress < 30) {
+          setProcessingStage("Analyzing food description...")
+        } else if (progress < 60) {
+          setProcessingStage("Calculating nutritional values...")
+        } else if (progress < 90) {
+          setProcessingStage("Finalizing results...")
+        }
+      }, 700)
+
       const response = await fetch('/api/analyze-text-food', {
         method: 'POST',
         headers: {
@@ -34,11 +59,16 @@ export function TextPromptEntry({ onFoodAnalyzed }: TextPromptEntryProps) {
         body: JSON.stringify({ text }),
       })
 
+      clearInterval(progressInterval)
+      setProgress(100)
+      setProcessingStage("Analysis complete!")
+
       if (!response.ok) {
         throw new Error('Failed to analyze food')
       }
 
       const foodData = await response.json()
+      console.log("Received food data:", foodData)
 
       // Convert the nutrition data to our FoodItem format
       const foodItem: FoodItem = {
@@ -53,12 +83,12 @@ export function TextPromptEntry({ onFoodAnalyzed }: TextPromptEntryProps) {
         serving_quantity: foodData.serving_size || 100,
         serving_quantity_unit: "g",
         perGramValues: {
-          calories: (foodData.calories || 0) / 100,
-          carbs: (foodData.carbs || 0) / 100,
-          fats: (foodData.fats || 0) / 100,
-          protein: (foodData.protein || 0) / 100,
-          sugar: (foodData.sugar || 0) / 100,
-          fiber: (foodData.fiber || 0) / 100,
+          calories: (foodData.calories || 0) / (foodData.serving_size || 100),
+          carbs: (foodData.carbs || 0) / (foodData.serving_size || 100),
+          fats: (foodData.fats || 0) / (foodData.serving_size || 100),
+          protein: (foodData.protein || 0) / (foodData.serving_size || 100),
+          sugar: (foodData.sugar || 0) / (foodData.serving_size || 100),
+          fiber: (foodData.fiber || 0) / (foodData.serving_size || 100),
           vitamin_a: 0,
           vitamin_c: 0,
           calcium: 0,
@@ -84,6 +114,7 @@ export function TextPromptEntry({ onFoodAnalyzed }: TextPromptEntryProps) {
         sodium: 0,
       }
 
+      console.log("Created food item:", foodItem)
       onFoodAnalyzed(foodItem)
       setText("") // Clear the input after successful analysis
     } catch (err) {
@@ -91,33 +122,25 @@ export function TextPromptEntry({ onFoodAnalyzed }: TextPromptEntryProps) {
       setError('Failed to analyze food description')
     } finally {
       setIsProcessing(false)
+      setProgress(0)
+      setProcessingStage("")
     }
   }
 
-  const captureImage = () => {
-    if (!videoRef) return;
-    
-    const video = videoRef as unknown as HTMLVideoElement;
-    
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+  const startCamera = () => {
+    setShowCamera(true)
+  }
 
-    ctx.drawImage(video, 0, 0);
-    const imageDataUrl = canvas.toDataURL('image/jpeg');
-    
-    // Process the image or send it to your API
-    console.log("Image captured:", imageDataUrl);
-    
-    // Close the camera
-    setShowCamera(false);
+  const captureImage = () => {
+    // Camera capture logic would go here
+    setShowCamera(false)
   }
 
   return (
-    <Card className="max-w-2xl mx-auto">
-      <CardContent className="p-6 space-y-4">
+    <Card className="w-full">
+      <CardContent className="p-4 space-y-4">
+        <h3 className="text-lg font-semibold">Describe Your Food</h3>
+
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
@@ -126,12 +149,8 @@ export function TextPromptEntry({ onFoodAnalyzed }: TextPromptEntryProps) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="food-text" className="block text-sm font-medium mb-2">
-              Describe what you ate
-            </label>
             <Textarea
-              id="food-text"
-              placeholder="Example: 2 slices of whole wheat toast with 1 tbsp peanut butter and a medium banana"
+              placeholder="Describe your food in detail (e.g., '2 scrambled eggs with 1 slice of whole wheat toast and 1 tbsp butter')"
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={4}
@@ -142,6 +161,13 @@ export function TextPromptEntry({ onFoodAnalyzed }: TextPromptEntryProps) {
               Include quantities (cups, tbsp, oz) when possible for more accurate results
             </p>
           </div>
+
+          {isProcessing && (
+            <div className="space-y-2">
+              <Progress value={progress} className="w-full h-2" />
+              <p className="text-sm text-center text-muted-foreground">{processingStage}</p>
+            </div>
+          )}
 
           <Button 
             type="submit" 

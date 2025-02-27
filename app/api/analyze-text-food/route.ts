@@ -39,19 +39,19 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: "system",
-          content: "You are a nutrition expert. Analyze the food description and provide nutritional information in JSON format. Return ONLY the JSON object with no markdown formatting, code blocks, or additional text."
+          content: "You are a nutrition expert. Analyze the food description and provide nutritional information in JSON format. Return ONLY the JSON object with no markdown formatting, code blocks, or additional text. Ensure all nutritional values are reasonable and accurate for the described food and portion size."
         },
         {
           role: "user",
           content: `Analyze this food description and provide the following information in JSON format: 
           foodName (a concise name for this entry), 
           serving_size (estimated weight in grams), 
-          calories (estimated calories), 
-          carbs (estimated carbs in grams), 
-          fats (estimated fats in grams), 
-          protein (estimated protein in grams), 
-          sugar (estimated sugar in grams), 
-          fiber (estimated fiber in grams).
+          calories (estimated total calories for the described portion), 
+          carbs (estimated total carbs in grams for the described portion), 
+          fats (estimated total fats in grams for the described portion), 
+          protein (estimated total protein in grams for the described portion), 
+          sugar (estimated total sugar in grams for the described portion), 
+          fiber (estimated total fiber in grams for the described portion).
           
           If multiple food items are mentioned, combine them into a single entry with total nutritional values.
           
@@ -74,10 +74,36 @@ export async function POST(request: NextRequest) {
       if (jsonMatch && jsonMatch[1]) {
         cleanedContent = jsonMatch[1].trim();
       }
+    } else if (content.includes("```")) {
+      // Handle case where code block doesn't specify language
+      const jsonMatch = content.match(/```\s*([\s\S]*?)\s*```/);
+      if (jsonMatch && jsonMatch[1]) {
+        cleanedContent = jsonMatch[1].trim();
+      }
     }
     
     // Parse the JSON
-    const foodData = JSON.parse(cleanedContent);
+    let foodData;
+    try {
+      foodData = JSON.parse(cleanedContent);
+      
+      // Validate and ensure reasonable values
+      foodData.calories = Math.min(Math.max(0, foodData.calories || 0), 5000); // Cap at 5000 calories
+      foodData.carbs = Math.min(Math.max(0, foodData.carbs || 0), 1000);
+      foodData.fats = Math.min(Math.max(0, foodData.fats || 0), 500);
+      foodData.protein = Math.min(Math.max(0, foodData.protein || 0), 500);
+      foodData.sugar = Math.min(Math.max(0, foodData.sugar || 0), 500);
+      foodData.fiber = Math.min(Math.max(0, foodData.fiber || 0), 100);
+      foodData.serving_size = Math.min(Math.max(1, foodData.serving_size || 100), 5000);
+      
+      console.log("Processed food data:", foodData);
+    } catch (parseError) {
+      console.error("Error parsing food data:", parseError, cleanedContent);
+      return NextResponse.json(
+        { error: "Failed to parse nutrition data" },
+        { status: 500 }
+      );
+    }
 
     // Get the user's ID from Supabase using their email
     const { data: userData, error: userError } = await supabase

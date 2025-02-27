@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils"
 interface MealEntryProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: (updatedFood: FoodItem) => Promise<void>
+  onConfirm: (foodData: any) => void
   selectedFood: FoodItem | null
 }
 
@@ -88,6 +88,22 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
     }
   }, [selectedFood])
 
+  useEffect(() => {
+    if (selectedFood) {
+      setFoodName(selectedFood.foodName || "")
+      setCalories(selectedFood.calories || 0)
+      setCarbs(selectedFood.carbs || 0)
+      setProtein(selectedFood.protein || 0)
+      setFats(selectedFood.fats || 0)
+    }
+  }, [selectedFood])
+
+  useEffect(() => {
+    const today = new Date()
+    const formattedDate = today.toISOString().split('T')[0]
+    setSelectedDate(new Date(formattedDate))
+  }, [])
+
   const handleServingSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newSize = e.target.value
     setServingSize(newSize)
@@ -117,42 +133,20 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
     }
   }
 
-  const handleConfirm = async () => {
-    if (!selectedFood) return;
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
     
-    setIsSaving(true)
-    
-    try {
-      // Create an updated version of the food item
-      const updatedFood: FoodItem = {
-        ...selectedFood,
-        foodName: foodName,
-        calories: calories,
-        carbs: carbs,
-        fats: fats,
-        protein: protein,
-        sugar: sugar,
-        fiber: fiber,
-        sodium: sodium,
-        calcium: calcium,
-        iron: iron,
-        vitamin_a: vitaminA,
-        vitamin_c: vitaminC,
-        serving_size: servingSize,
-        serving_size_g: parseFloat(servingSize),
-        meal: selectedMeal, // Add the selected meal
-        date: selectedDate.toISOString() // Add the selected date
-      }
-      
-      await onConfirm(updatedFood)
-      
-      // Show confirmation dialog
-      setShowConfirmation(true)
-    } catch (error) {
-      console.error("Error saving food entry:", error)
-    } finally {
-      setIsSaving(false)
+    const foodData = {
+      foodName,
+      calories: calories,
+      carbs: carbs,
+      protein: protein,
+      fats: fats,
+      meal: selectedMeal,
+      date: selectedDate.toISOString(),
     }
+    
+    onConfirm(foodData)
   }
 
   const handleConfirmationClose = () => {
@@ -418,7 +412,7 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
               <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none">
                 Cancel
               </Button>
-              <Button onClick={handleConfirm} disabled={isSaving} className="flex-1 sm:flex-none">
+              <Button onClick={handleSubmit} disabled={isSaving} className="flex-1 sm:flex-none">
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
