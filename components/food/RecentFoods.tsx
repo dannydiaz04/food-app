@@ -62,9 +62,9 @@ export function RecentFoods({ loading, error, foods, onSort, onCheckFood }: Rece
                   <TableCell className="">{food.calories}</TableCell>
                   <TableCell className="hidden lg:table-cell">{food.protein}g</TableCell>
                   <TableCell className="">
-                    <Button variant="ghost" onClick={() => onCheckFood(food.food_ky)}>
+                    {/* <Button variant="ghost" onClick={() => onCheckFood(food.food_ky)}>
                       Add
-                    </Button>
+                    </Button> */}
                   </TableCell>
                 </TableRow>
               ))}

@@ -38,9 +38,9 @@ export function SearchForm({ searchQuery, onSearchChange, onSearch, onQuickAdd, 
           )}
         </Button>
       </form>
-      <Link href="#" onClick={onQuickAdd} className="text-sm text-blue-500 hover:underline inline-block">
+      {/* <Link href="#" onClick={onQuickAdd} className="text-sm text-blue-500 hover:underline inline-block">
         Quick add calories
-      </Link>
+      </Link> */}
     </div>
   )
 }
