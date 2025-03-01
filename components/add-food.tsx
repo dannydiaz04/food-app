@@ -522,14 +522,14 @@ export function AddFood({ meal }: AddFoodProps) {
             </TabsContent>
           </Tabs>
 
-          <div className="flex justify-end">
+          {/* <div className="flex justify-end">
             <Button 
               onClick={handleConfirm}
               variant="default"
             >
               Add Food
             </Button>
-          </div>
+          </div> */}
         </CardContent>
       </Card>
 

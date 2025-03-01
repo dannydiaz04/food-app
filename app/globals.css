@@ -129,3 +129,23 @@
   border-style: solid;
   border-color: black transparent transparent transparent;
 }
+
+@keyframes scan {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(120px); }
+}
+.animate-scan {
+  animation: scan 2s infinite ease-in-out;
+}
+
+@keyframes scanFullHeight {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(calc(40vh - 2px));
+  }
+  100% {
+    transform: translateY(0);
+  }
+}

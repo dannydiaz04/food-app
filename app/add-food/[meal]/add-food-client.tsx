@@ -4,11 +4,13 @@ import { useState, useEffect, useRef } from "react"
 import { AddFood } from "@/components/add-food"
 import dynamic from 'next/dynamic'
 import { Button } from "@/components/ui/button"
-import { Scan } from "lucide-react"
+import { Scan, X, RotateCcw, Loader2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, Loader2 } from "lucide-react"
+import { AlertCircle } from "lucide-react"
 import { useSearchParams, useRouter } from 'next/navigation'
 import { MealEntry } from "@/components/meal-entry"
+import { Card, CardContent } from "@/components/ui/card"
+import type { FoodItem } from "@/types/food"
 
 // Dynamically import BarcodeScanner with no SSR
 const BarcodeScanner = dynamic(
@@ -148,12 +150,11 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
 
   const [showScanner, setShowScanner] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
-  const [scannedProduct, setScannedProduct] = useState<FoodProduct | null>(null)
+  const [scannedFood, setScannedFood] = useState<FoodItem | null>(null)
+  const [foodImage, setFoodImage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
   const [showMealEntry, setShowMealEntry] = useState(false)
-  const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null)
-  const [showConfirmation, setShowConfirmation] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const scannerRef = useRef<{ stopCamera: () => void } | null>(null)
 
   useEffect(() => {
@@ -295,7 +296,7 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
         ...calculatedValues
       }
 
-      setSelectedFood(foodData)
+      setScannedFood(foodData)
       setShowMealEntry(true)
       setShowScanner(false)
       setScanError(null)
@@ -341,7 +342,7 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
 
   const handleMealEntryClose = () => {
     setShowMealEntry(false)
-    setSelectedFood(null)
+    setScannedFood(null)
   }
 
   const handleMealEntryConfirm = async (foodData: any, saveToFoodInfo: boolean) => {
@@ -374,10 +375,11 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
       
       // Handle success (show confirmation, etc.)
       setShowMealEntry(false);
-      setShowConfirmation(true);
+      router.push('/flavor-journal');
+      
     } catch (error) {
       console.error("Error saving food entry:", error);
-      setError("Failed to save food entry");
+      setScanError("Failed to save food entry");
     } finally {
       setIsLoading(false);
     }
@@ -396,17 +398,17 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
       )}
 
       {/* Show scanned product */}
-      {scannedProduct && !isLoading && (
+      {scannedFood && !isLoading && (
         <Alert className="bg-green-500/10 text-green-500 border-green-500/20">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Added to {meal}: {scannedProduct.foodName} <br />
-            Calories: {scannedProduct.calories} cal, 
-            Carbs: {scannedProduct.carbs}g, 
-            Fats: {scannedProduct.fats}g, 
-            Protein: {scannedProduct.protein}g <br />
+            Added to {meal}: {scannedFood.foodName} <br />
+            Calories: {scannedFood.calories} cal, 
+            Carbs: {scannedFood.carbs}g, 
+            Fats: {scannedFood.fats}g, 
+            Protein: {scannedFood.protein}g <br />
             <small>
-              Full Nutriments: {JSON.stringify(scannedProduct.nutriments)}
+              Full Nutriments: {JSON.stringify(scannedFood.perGramValues)}
             </small>
           </AlertDescription>
         </Alert>
@@ -438,7 +440,7 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
         isOpen={showMealEntry}
         onClose={handleMealEntryClose}
         onConfirm={(foodData, saveToFoodInfo) => handleMealEntryConfirm(foodData, saveToFoodInfo)}
-        selectedFood={selectedFood}
+        selectedFood={scannedFood}
       />
 
       {/* Keep only the 'Add' button */}

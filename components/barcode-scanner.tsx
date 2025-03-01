@@ -203,37 +203,67 @@ const BarcodeScanner = forwardRef<{ stopCamera: () => void }, BarcodeScannerProp
       };
     }, []);
 
+    const [videoConstraints, setVideoConstraints] = useState({
+      width: { ideal: window.innerWidth },
+      height: { ideal: window.innerHeight },
+      facingMode: "environment"
+    });
+
     useEffect(() => {
       if (!isClient || !videoRef.current) return;
 
       let mounted = true;
       const reader = codeReader.current;
 
-      reader
-        .decodeFromVideoDevice(null, videoRef.current, (result, error) => {
-          if (!mounted) return;
-          if (result) {
-            const barcode = result.getText();
-            console.log('Barcode detected:', barcode);
-            processBarcodeResult(barcode, false);
-          }
-          if (error) {
-            if (error.name === 'NotAllowedError' || error.name === 'NotFoundError') {
-              console.log('Camera error:', error.name);
-              onError(error);
+      // Define exact constraints to match viewport
+      const constraints = {
+        video: videoConstraints
+      };
+
+      navigator.mediaDevices.getUserMedia(constraints)
+        .then(stream => {
+          if (!mounted || !videoRef.current) return;
+          
+          // Set the stream to video element
+          videoRef.current.srcObject = stream;
+          streamRef.current = stream;
+          
+          // Get actual dimensions after camera is initialized
+          const { videoWidth, videoHeight } = videoRef.current;
+          
+          // Adjust video element to match camera output ratio
+          if (videoWidth && videoHeight) {
+            videoRef.current.style.objectFit = "cover";
+            
+            // Apply specific styling to center the video properly
+            const containerAspect = window.innerWidth / window.innerHeight;
+            const videoAspect = videoWidth / videoHeight;
+            
+            if (videoAspect > containerAspect) {
+              // Video is wider than container
+              videoRef.current.style.width = "100%";
+              videoRef.current.style.height = "auto";
+            } else {
+              // Video is taller than container
+              videoRef.current.style.width = "auto";
+              videoRef.current.style.height = "100%";
             }
-            // Only log non-NotFoundException errors
-            if (error.name !== 'NotFoundException') {
+          }
+          
+          // Now start decoding from the properly configured stream
+          return reader.decodeFromVideoDevice(null, videoRef.current, (result, error) => {
+            // Existing decode handler logic
+            if (!mounted) return;
+            if (result) {
+              const barcode = result.getText();
+              console.log('Barcode detected:', barcode);
+              processBarcodeResult(barcode, false);
+            }
+            if (error && error.name !== 'NotFoundException') {
               console.error('Scanning error:', error);
               onError(error);
             }
-          }
-        })
-        .then(controls => {
-          // Store the stream to be able to stop it later
-          if (videoRef.current && videoRef.current.srcObject) {
-            streamRef.current = videoRef.current.srcObject as MediaStream;
-          }
+          });
         })
         .catch((err) => {
           if (mounted) {
@@ -242,11 +272,23 @@ const BarcodeScanner = forwardRef<{ stopCamera: () => void }, BarcodeScannerProp
           }
         });
 
+      // Add a resize handler to adjust on orientation change
+      const handleResize = () => {
+        setVideoConstraints({
+          width: { ideal: window.innerWidth },
+          height: { ideal: window.innerHeight },
+          facingMode: "environment"
+        });
+      };
+      
+      window.addEventListener('resize', handleResize);
+
       return () => {
         mounted = false;
         stopCamera();
+        window.removeEventListener('resize', handleResize);
       };
-    }, [isClient, onDetected, onError]);
+    }, [isClient, onDetected, onError, videoConstraints]);
 
     return (
       <div className="fixed inset-0 z-50 bg-black">
@@ -260,13 +302,26 @@ const BarcodeScanner = forwardRef<{ stopCamera: () => void }, BarcodeScannerProp
               autoPlay
             />
             <div className="absolute inset-0 pointer-events-none">
-              {/* Scanning guides */}
-              <div className="absolute left-[15%] right-[15%] top-1/2 h-[3px] bg-red-500/70 transform -translate-y-1/2" />
-              <div className="absolute top-[15%] bottom-[15%] left-1/2 w-[3px] bg-red-500/70 transform -translate-x-1/2" />
-              <div className="absolute top-[15%] left-[15%] w-[30px] h-[30px] border-l-[3px] border-t-[3px] border-red-500/70" />
-              <div className="absolute top-[15%] right-[15%] w-[30px] h-[30px] border-r-[3px] border-t-[3px] border-red-500/70" />
-              <div className="absolute bottom-[15%] left-[15%] w-[30px] h-[30px] border-l-[3px] border-b-[3px] border-red-500/70" />
-              <div className="absolute bottom-[15%] right-[15%] w-[30px] h-[30px] border-r-[3px] border-b-[3px] border-red-500/70" />
+              {/* Darkened overlay with transparent center */}
+              <div className="absolute inset-0 bg-black bg-opacity-50">
+                {/* Transparent center matching the effective scan area */}
+                <div className="absolute left-[15%] right-[15%] top-[30%] bottom-[30%] border-2 border-red-500/70 bg-transparent"></div>
+              </div>
+              
+              {/* Scanning line animation - UPDATED */}
+              <div 
+                className="absolute left-[15%] right-[15%] h-[2px] bg-red-500/70"
+                style={{
+                  animation: 'scanFullHeight 2s infinite linear',
+                  top: 'calc(30%)',
+                }}
+              ></div>
+              
+              {/* Corner markers */}
+              <div className="absolute top-[30%] left-[15%] w-[20px] h-[20px] border-l-2 border-t-2 border-red-500/70"></div>
+              <div className="absolute top-[30%] right-[15%] w-[20px] h-[20px] border-r-2 border-t-2 border-red-500/70"></div>
+              <div className="absolute bottom-[30%] left-[15%] w-[20px] h-[20px] border-l-2 border-b-2 border-red-500/70"></div>
+              <div className="absolute bottom-[30%] right-[15%] w-[20px] h-[20px] border-r-2 border-b-2 border-red-500/70"></div>
             </div>
             
             {/* Header with title and close button */}

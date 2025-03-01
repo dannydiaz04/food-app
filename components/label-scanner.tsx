@@ -24,6 +24,9 @@ export function LabelScanner() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const [cameraActive, setCameraActive] = useState(false)
+  const [viewportDimensions, setViewportDimensions] = useState({ 
+    width: 0, height: 0, offsetX: 0, offsetY: 0, scale: 1 
+  });
 
   useEffect(() => {
     if (cameraActive && videoRef.current && videoRef.current.srcObject) {
@@ -38,12 +41,52 @@ export function LabelScanner() {
     try {
       setCameraActive(true)
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: window.innerWidth },
+          height: { ideal: window.innerHeight }
+        } 
       })
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         streamRef.current = stream
+        
+        // Wait for video metadata to load to get actual dimensions
+        videoRef.current.onloadedmetadata = () => {
+          if (!videoRef.current) return;
+          
+          const videoWidth = videoRef.current.videoWidth;
+          const videoHeight = videoRef.current.videoHeight;
+          const containerWidth = videoRef.current.clientWidth;
+          const containerHeight = videoRef.current.clientHeight;
+          
+          // Calculate scaling and positioning to match what's visible in the viewport
+          const videoRatio = videoWidth / videoHeight;
+          const containerRatio = containerWidth / containerHeight;
+          
+          let scale, offsetX, offsetY;
+          
+          if (videoRatio > containerRatio) {
+            // Video is wider than container
+            scale = containerHeight / videoHeight;
+            offsetX = (containerWidth - videoWidth * scale) / 2;
+            offsetY = 0;
+          } else {
+            // Video is taller than container
+            scale = containerWidth / videoWidth;
+            offsetX = 0;
+            offsetY = (containerHeight - videoHeight * scale) / 2;
+          }
+          
+          setViewportDimensions({
+            width: videoWidth,
+            height: videoHeight,
+            offsetX,
+            offsetY,
+            scale
+          });
+        };
         
         try {
           await videoRef.current.play()
@@ -70,18 +113,36 @@ export function LabelScanner() {
   }
 
   const captureImage = () => {
-    if (!videoRef.current) return
+    if (!videoRef.current) return;
 
-    const canvas = document.createElement('canvas')
-    canvas.width = videoRef.current.videoWidth
-    canvas.height = videoRef.current.videoHeight
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    ctx.drawImage(videoRef.current, 0, 0)
-    const imageDataUrl = canvas.toDataURL('image/jpeg')
-    setImage(imageDataUrl)
-    stopCamera()
+    const canvas = document.createElement('canvas');
+    const { width, height, offsetX, offsetY, scale } = viewportDimensions;
+    
+    // Set canvas to the size of the video
+    canvas.width = videoRef.current.clientWidth;
+    canvas.height = videoRef.current.clientHeight;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Calculate the source rectangle from the video that's actually visible
+    const sourceWidth = canvas.width / scale;
+    const sourceHeight = canvas.height / scale;
+    
+    // Calculate source position to center the crop
+    const sourceX = (width - sourceWidth) / 2;
+    const sourceY = (height - sourceHeight) / 2;
+    
+    // Draw only the visible portion of the video
+    ctx.drawImage(
+      videoRef.current,
+      sourceX, sourceY, sourceWidth, sourceHeight, // Source rectangle
+      0, 0, canvas.width, canvas.height // Destination rectangle
+    );
+    
+    const imageDataUrl = canvas.toDataURL('image/jpeg');
+    setImage(imageDataUrl);
+    stopCamera();
   }
 
   const resetCamera = () => {
@@ -238,13 +299,23 @@ export function LabelScanner() {
       )}
 
       {cameraActive && (
-        <div className="fixed inset-0 z-50 bg-black">
+        <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
           <video
             ref={videoRef}
             autoPlay
             playsInline
-            className="h-full w-full object-cover"
+            className="absolute w-full h-full object-cover"
           />
+          
+          {/* Add guide overlay for label scanning */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="border-2 border-white border-opacity-70 rounded-lg w-[80%] h-[60%]"></div>
+            </div>
+            <div className="absolute top-8 left-0 right-0 text-center">
+              <p className="text-white font-medium text-shadow">Position nutrition label in frame</p>
+            </div>
+          </div>
           
           <div className="absolute bottom-10 left-0 right-0 flex justify-center">
             <Button
@@ -275,11 +346,12 @@ export function LabelScanner() {
               </Alert>
             )}
 
-            <div className="relative aspect-[4/3] bg-black rounded-lg overflow-hidden">
+            <div className="relative bg-black rounded-lg overflow-hidden" 
+                 style={{height: "calc(100vh - 300px)", maxHeight: "500px"}}>
               <img
                 src={image}
-                alt="Captured nutrition label"
-                className="absolute inset-0 w-full h-full object-contain"
+                alt="Captured image"
+                className="w-full h-full object-contain"
               />
             </div>
 
@@ -338,4 +410,4 @@ export function LabelScanner() {
       </Dialog>
     </div>
   )
-} 
+}
