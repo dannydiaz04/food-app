@@ -186,38 +186,39 @@ export function LabelScanner() {
     setScannedFood(null)
   }
 
-  const handleMealEntryConfirm = async (updatedFood: FoodItem) => {
+  const handleMealEntryConfirm = async (foodData: any, saveToFoodInfo: boolean) => {
     try {
       setIsProcessing(true)
       
-      // Save the food entry
-      const response = await fetch('/api/macro-calculator', {
-        method: 'POST',
+      // Current logic to save the food entry
+      const response = await fetch("/api/macro-calculator", {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...updatedFood,
-          date: new Date().toISOString(),
-        }),
+        body: JSON.stringify(foodData),
       })
       
       if (!response.ok) {
         throw new Error("Failed to save food entry")
       }
       
-      // Show confirmation dialog
-      setShowConfirmation(true)
+      // If the user wants to save to food_info table
+      if (saveToFoodInfo) {
+        await fetch("/api/save-to-food-info", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(foodData),
+        })
+      }
       
-      // Close meal entry dialog
       setShowMealEntry(false)
-      setScannedFood(null)
-      
-      // Reset camera after a short delay
-      setTimeout(resetCamera, 2000)
-    } catch (err) {
-      console.error("Error saving food entry:", err)
-      setError('Failed to save food entry')
+      setShowConfirmation(true)
+    } catch (error) {
+      console.error("Error saving food entry:", error)
+      setError("Failed to save food entry")
     } finally {
       setIsProcessing(false)
     }

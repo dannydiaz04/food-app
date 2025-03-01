@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { AddFood } from "@/components/add-food"
 import dynamic from 'next/dynamic'
 import { Button } from "@/components/ui/button"
 import { Scan } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Loader2 } from "lucide-react"
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { MealEntry } from "@/components/meal-entry"
 
 // Dynamically import BarcodeScanner with no SSR
@@ -136,6 +136,7 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
   const dateParam = searchParams.get('date')
   const barcodeParam = searchParams.get('barcode')
   const [currentDate, setCurrentDate] = useState<Date | null>(null)
+  const router = useRouter()
   
   useEffect(() => {
     if (dateParam) {
@@ -151,12 +152,24 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [showMealEntry, setShowMealEntry] = useState(false)
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null)
+  const [showConfirmation, setShowConfirmation] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const scannerRef = useRef<{ stopCamera: () => void } | null>(null)
 
   useEffect(() => {
     if (barcodeParam) {
       handleBarcodeDetected(barcodeParam);
     }
   }, [barcodeParam]);
+
+  // Make sure to clean up scanner if component unmounts while scanner is active
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stopCamera();
+      }
+    };
+  }, []);
 
   async function handleBarcodeDetected(barcode: string) {
     try {
@@ -292,6 +305,9 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
       url.searchParams.delete('barcode');
       window.history.replaceState({}, '', url.toString());
       
+      // Navigate to flavor journal after successful scan and save
+      router.push('/flavor-journal');
+      
     } catch (error) {
       console.error("Error processing barcode:", error);
       console.error("Full error details:", {
@@ -307,94 +323,68 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
   function handleScanError(error: Error) {
     console.error("Barcode scan error:", error)
     setScanError(error.message)
+    setShowScanner(false)
   }
 
-  const toggleScanner = () => {
-    setShowScanner(prev => !prev)
-    setScanError(null)
-    setScannedProduct(null)
-  }
+  const handleScanSuccess = () => {
+    // Navigation will happen after successful scan and entry
+    setShowScanner(false);
+    router.push('/flavor-journal');
+  };
 
-  const confirmSave = async () => {
-    if (!scannedProduct || !currentDate) return
-    try {
-      setIsLoading(true)
-      const response = await fetch('/api/macro-calculator', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...scannedProduct,
-          // Convert empty strings to 0 for the API
-          calories: scannedProduct.calories || 0,
-          carbs: scannedProduct.carbs || 0,
-          fats: scannedProduct.fats || 0,
-          protein: scannedProduct.protein || 0,
-          meal,
-          date: currentDate.toISOString(),
-        }),
-      })
-      if (!response.ok) {
-        throw new Error('Failed to save food entry')
-      }
-      setScannedProduct(null)
-      setShowScanner(false)
-    } catch (err) {
-      console.error("Error saving food entry:", err)
-      alert("Failed to save food entry")
-    } finally {
-      setIsLoading(false)
+  const handleCloseScanner = () => {
+    if (scannerRef.current) {
+      scannerRef.current.stopCamera();
     }
-  }
+    setShowScanner(false);
+  };
 
   const handleMealEntryClose = () => {
     setShowMealEntry(false)
     setSelectedFood(null)
   }
 
-  const handleMealEntryConfirm = async () => {
-    if (!selectedFood || !currentDate) return
+  const handleMealEntryConfirm = async (foodData: any, saveToFoodInfo: boolean) => {
     try {
-      setIsLoading(true)
-      const response = await fetch('/api/macro-calculator', {
-        method: 'POST',
+      setIsLoading(true);
+      
+      // Save the food entry
+      const response = await fetch("/api/macro-calculator", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...selectedFood,
-          meal,
-          date: currentDate.toISOString(),
-        }),
-      })
+        body: JSON.stringify(foodData),
+      });
+      
       if (!response.ok) {
-        throw new Error('Failed to save food entry')
+        throw new Error("Failed to save food entry");
       }
-      setSelectedFood(null)
-      setShowMealEntry(false)
-    } catch (err) {
-      console.error("Error saving food entry:", err)
-      alert("Failed to save food entry")
+      
+      // If user chose to save to food_info table
+      if (saveToFoodInfo) {
+        await fetch("/api/save-to-food-info", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(foodData),
+        });
+      }
+      
+      // Handle success (show confirmation, etc.)
+      setShowMealEntry(false);
+      setShowConfirmation(true);
+    } catch (error) {
+      console.error("Error saving food entry:", error);
+      setError("Failed to save food entry");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Removed the Scan Barcode button */}
-      {/* <div className="flex justify-end">
-        <Button 
-          onClick={toggleScanner}
-          variant="outline"
-          className="flex items-center gap-2"
-        >
-          <Scan className="w-4 h-4" />
-          {showScanner ? 'Hide Scanner' : 'Scan Barcode'}
-        </Button>
-      </div> */}
-
       {/* Loading state */}
       {isLoading && (
         <Alert className="bg-blue-500/10 text-blue-500 border-blue-500/20">
@@ -433,15 +423,13 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
       )}
 
       {showScanner && (
-        <div className="flex justify-center">
-          <div className="w-full max-w-md">
-            <BarcodeScanner 
-              onDetected={handleBarcodeDetected}
-              onError={handleScanError}
-              onClose={() => setShowScanner(false)}
-            />
-          </div>
-        </div>
+        <BarcodeScanner
+          ref={scannerRef}
+          onDetected={handleBarcodeDetected}
+          onError={handleScanError}
+          onClose={handleCloseScanner}
+          onSuccess={handleScanSuccess}
+        />
       )}
 
       <AddFood meal={meal} />
@@ -449,26 +437,12 @@ export function AddFoodClient({ meal }: AddFoodClientProps) {
       <MealEntry
         isOpen={showMealEntry}
         onClose={handleMealEntryClose}
-        onConfirm={handleMealEntryConfirm}
+        onConfirm={(foodData, saveToFoodInfo) => handleMealEntryConfirm(foodData, saveToFoodInfo)}
         selectedFood={selectedFood}
       />
 
       {/* Keep only the 'Add' button */}
       <div className="flex justify-end">
-        {/* <Button 
-          onClick={handleMealEntryConfirm}
-          variant="default"
-        >
-          Add
-        </Button> */}
-        {/* Removed the Macro Calculator button */}
-        {/* <Button 
-          onClick={handleQuickAddCalories}
-          variant="outline"
-          className="ml-2"
-        >
-          Go to Macro Calculator
-        </Button> */}
       </div>
     </div>
   )

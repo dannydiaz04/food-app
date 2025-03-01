@@ -32,7 +32,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 interface MealEntryProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: (foodData: any) => void
+  onConfirm: (foodData: any, saveToFoodInfo?: boolean) => void
   selectedFood: FoodItem | null
 }
 
@@ -80,6 +80,7 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [showMicronutrients, setShowMicronutrients] = useState(false)
   const [autoCalculateCalories, setAutoCalculateCalories] = useState(true)
+  const [saveToDatabase, setSaveToDatabase] = useState(false)
 
   // Auto-calculate calories based on macros
   useEffect(() => {
@@ -250,7 +251,7 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
         vitamin_c: vitaminC,
       };
       
-      onConfirm(foodData);
+      onConfirm(foodData, saveToDatabase);
     } catch (error) {
       console.error("Error in form submission:", error);
     } finally {
@@ -553,6 +554,20 @@ export function MealEntry({ isOpen, onClose, onConfirm, selectedFood }: MealEntr
                 </div>
               </div>
             )}
+            
+            <div className="flex items-center space-x-2 mt-4 mb-2">
+              <Checkbox 
+                id="saveToDatabase" 
+                checked={saveToDatabase}
+                onCheckedChange={(checked) => setSaveToDatabase(checked === true)}
+              />
+              <label
+                htmlFor="saveToDatabase"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Save to my food database for future use
+              </label>
+            </div>
             
             <div className="flex justify-end gap-2 mt-4">
               <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none">
