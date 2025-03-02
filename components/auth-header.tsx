@@ -1,9 +1,11 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import LogoSvg from "@/public/Phone Eats First.svg"
 
 export function AuthHeader() {
   const { data: session } = useSession()
@@ -24,12 +26,16 @@ export function AuthHeader() {
         <Link 
           href="/" 
           onClick={handleLogoClick}
-          className="text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300 text-xl font-bold ml-2"
+          className="text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300 ml-2"
         >
-          Flavor <div className="text-green-600 dark:text-green-400">Journal</div>
+          <Image
+            src={LogoSvg}
+            alt="Phone Eats First Logo"
+            className="h-16 w-auto"
+          />
         </Link>
         <ThemeToggle />
       </div>
     </header>
   )
-} 
+}
